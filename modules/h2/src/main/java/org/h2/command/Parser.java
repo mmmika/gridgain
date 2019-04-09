@@ -640,15 +640,14 @@ public class Parser {
     private Prepared currentPrepared;
     private Select currentSelect;
     private ArrayList<Parameter> parameters;
-    private ArrayList<Parameter> indexedParameterList;
-    private ArrayList<Parameter> suppliedParameters;
-    private ArrayList<Parameter> suppliedParameterList;
     private String schemaName;
     private ArrayList<String> expectedList;
     private boolean rightsChecked;
     private boolean recompileAlways;
     private boolean literalsChecked;
+    private ArrayList<Parameter> indexedParameterList;
     private int orderInFrom;
+    private ArrayList<Parameter> suppliedParameterList;
 
     public Parser(Session session) {
         this.database = session.getDatabase();
@@ -681,8 +680,8 @@ public class Parser {
     public Command prepareCommand(String sql) {
         try {
             Prepared p = parse(sql);
-            if (currentTokenType != SEMICOLON && currentTokenType != END) {
-                addExpected(SEMICOLON);
+            boolean hasMore = isToken(SEMICOLON);
+            if (!hasMore && currentTokenType != END) {
                 throw getSyntaxError();
             }
             try {
@@ -691,59 +690,16 @@ public class Parser {
                 CommandContainer.clearCTE(session, p);
                 throw t;
             }
-            if (parseIndex < sql.length()) {
-                sql = sql.substring(0, parseIndex);
-            }
-            CommandContainer c = new CommandContainer(session, sql, p);
-            if (currentTokenType == SEMICOLON) {
+            Command c = new CommandContainer(session, sql, p);
+            if (hasMore) {
                 String remaining = originalSQL.substring(parseIndex);
                 if (!StringUtils.isWhitespaceOrEmpty(remaining)) {
-                    return prepareCommandList(c, sql, remaining);
+                    c = new CommandList(session, sql, c, remaining);
                 }
             }
             return c;
         } catch (DbException e) {
             throw e.addSQL(originalSQL);
-        }
-    }
-
-    private CommandList prepareCommandList(CommandContainer command, String sql, String remaining) {
-        try {
-            ArrayList<Prepared> list = Utils.newSmallArrayList();
-            boolean stop = false;
-            do {
-                if (stop) {
-                    return new CommandList(session, sql, command, list, parameters, remaining);
-                }
-                suppliedParameters = parameters;
-                suppliedParameterList = indexedParameterList;
-                Prepared p;
-                try {
-                    p = parse(remaining);
-                } catch (DbException ex) {
-                    // This command may depend on results of previous commands.
-                    if (ex.getErrorCode() == ErrorCode.CANNOT_MIX_INDEXED_AND_UNINDEXED_PARAMS) {
-                        throw ex;
-                    }
-                    return new CommandList(session, sql, command, list, parameters, remaining);
-                }
-                if (p instanceof DefineCommand) {
-                    // Next commands may depend on results of this command.
-                    stop = true;
-                }
-                list.add(p);
-                if (currentTokenType == END) {
-                    break;
-                }
-                if (currentTokenType != SEMICOLON) {
-                    addExpected(SEMICOLON);
-                    throw getSyntaxError();
-                }
-            } while (!StringUtils.isWhitespaceOrEmpty(remaining = originalSQL.substring(parseIndex)));
-            return new CommandList(session, sql, command, list, parameters, null);
-        } catch (Throwable t) {
-            command.clearCTE();
-            throw t;
         }
     }
 
@@ -778,12 +734,12 @@ public class Parser {
         } else {
             expectedList = null;
         }
-        parameters = suppliedParameters != null ? suppliedParameters : Utils.<Parameter>newSmallArrayList();
-        indexedParameterList = suppliedParameterList;
+        parameters = Utils.newSmallArrayList();
         currentSelect = null;
         currentPrepared = null;
         createView = null;
         recompileAlways = false;
+        indexedParameterList = suppliedParameterList;
         read();
         return parsePrepared();
     }
@@ -1234,7 +1190,7 @@ public class Parser {
             } while (readIfMore(true));
             read(EQUAL);
             Expression expression = readExpression();
-            if (columns.size() == 1 && expression.getType().getValueType() != Value.ROW) {
+            if (columns.size() == 1 && (expression.getType() == null || expression.getType().getValueType() != Value.ROW)) {
                 // the expression is parsed as a simple value
                 command.setAssignment(columns.get(0), expression);
             } else {
@@ -3579,39 +3535,34 @@ public class Parser {
             break;
         }
         case Function.TRIM: {
-            int flags;
-            boolean needFrom = false;
+            Expression space = null;
             if (readIf("LEADING")) {
-                flags = Function.TRIM_LEADING;
-                needFrom = true;
-            } else if (readIf("TRAILING")) {
-                flags = Function.TRIM_TRAILING;
-                needFrom = true;
-            } else {
-                needFrom = readIf("BOTH");
-                flags = Function.TRIM_LEADING | Function.TRIM_TRAILING;
-            }
-            Expression p0, space = null;
-            function.setFlags(flags);
-            if (needFrom) {
+                function = Function.getFunction(database, "LTRIM");
                 if (!readIf(FROM)) {
                     space = readExpression();
                     read(FROM);
                 }
-                p0 = readExpression();
-            } else {
-                if (readIf(FROM)) {
-                    p0 = readExpression();
-                } else {
-                    p0 = readExpression();
-                    if (readIf(FROM)) {
-                        space = p0;
-                        p0 = readExpression();
-                    }
+            }
+            else if (readIf("TRAILING")) {
+                function = Function.getFunction(database, "RTRIM");
+                if (!readIf(FROM)) {
+                    space = readExpression();
+                    read(FROM);
                 }
             }
-            if (!needFrom && space == null && readIf(COMMA)) {
+            else if (readIf("BOTH")) {
+                if (!readIf(FROM)) {
+                    space = readExpression();
+                    read(FROM);
+                }
+            }
+            Expression p0 = readExpression();
+            if (readIf(COMMA)) {
                 space = readExpression();
+            }
+            else if (readIf(FROM)) {
+                space = p0;
+                p0 = readExpression();
             }
             function.setParameter(0, p0);
             if (space != null) {
@@ -3903,7 +3854,6 @@ public class Parser {
             if (p == null) {
                 p = new Parameter(index);
                 indexedParameterList.set(index, p);
-                parameters.add(p);
             }
             read();
         } else {
@@ -3913,8 +3863,8 @@ public class Parser {
                         .get(ErrorCode.CANNOT_MIX_INDEXED_AND_UNINDEXED_PARAMS);
             }
             p = new Parameter(parameters.size());
-            parameters.add(p);
         }
+        parameters.add(p);
         return p;
     }
 
