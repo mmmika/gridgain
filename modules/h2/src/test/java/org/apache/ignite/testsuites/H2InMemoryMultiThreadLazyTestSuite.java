@@ -15,36 +15,26 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.sql;
+package org.apache.ignite.testsuites;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import junit.framework.Test;
+import org.h2.test.H2TestSuiteBuilder;
+import org.junit.internal.runners.SuiteMethod;
+import org.junit.runner.RunWith;
 
 /**
- * SQL Array: (1, 2, ?, 'abc')
+ * H2 in-memory multi-threaded tests in lazy-mode.
  */
-public class GridSqlValueRow extends GridSqlElement {
-    /**
-     * @param size Array size.
-     */
-    public GridSqlValueRow(int size) {
-        super(size == 0 ? Collections.emptyList() : new ArrayList<>(size));
-    }
+@RunWith(SuiteMethod.class)
+public class H2InMemoryMultiThreadLazyTestSuite {
+    /** */
+    public static Test suite() {
+        H2TestSuiteBuilder builder = new H2TestSuiteBuilder();
 
-    /** {@inheritDoc}  */
-    @Override public String getSQL() {
-        if (size() == 0)
-            return "ROW ()";
+        builder.memory = true;
+        builder.multiThreaded = true;
+        builder.lazy = true;
 
-        StringBuilder buff = new StringBuilder("ROW (");
-
-        for (int i = 0; i < size(); i++) {
-            if (i > 0)
-                buff.append(", ");
-
-            buff.append(child(i).getSQL());
-        }
-
-        return buff.append(')').toString();
+        return builder.buildSuite(H2InMemoryMultiThreadLazyTestSuite.class, true);
     }
 }

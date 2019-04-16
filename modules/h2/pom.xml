@@ -179,6 +179,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <phase>generate-test-sources</phase>
@@ -222,8 +223,12 @@
                         <additionalClasspathElement>${project.build.outputDirectory}</additionalClasspathElement>
                         <additionalClasspathElement>${project.build.testOutputDirectory}</additionalClasspathElement>
                     </additionalClasspathElements>
+                    <includes>
+                        <include>H2AllTestsSuite.java</include>
+                    </includes>
                     <excludes>
                         <exclude>TestAllJunit.java</exclude>
+                        <exclude>H2TestCase.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

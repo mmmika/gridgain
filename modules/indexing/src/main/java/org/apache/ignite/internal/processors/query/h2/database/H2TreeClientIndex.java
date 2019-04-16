@@ -62,7 +62,6 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
      * @param colsList Indexed columns.
      * @param inlineSize Inline size.
      * @param log Logger.
-     * @throws IgniteCheckedException If failed.
      * @return Index.
      */
     public static H2TreeClientIndex createIndex(

@@ -152,8 +152,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param affinityKey {@code true} for affinity key.
      * @param idxColsInfo Index column info.
      * @param treeName Tree name.
-     * @param segments Tree segmets.
-     * @throws IgniteCheckedException If failed.
+     * @param segments Tree segments.
+     * @param log Logger.
      */
     private H2TreeIndex(
         GridCacheContext<?, ?> cctx,
@@ -163,15 +163,16 @@ public class H2TreeIndex extends H2TreeIndexBase {
         boolean affinityKey,
         IndexColumnsInfo idxColsInfo,
         String treeName,
-        H2Tree[] segments
-    ) throws IgniteCheckedException {
+        H2Tree[] segments,
+        IgniteLogger log
+    ) {
         super(tbl, idxName, idxColsInfo.cols(),
             pk ? IndexType.createPrimaryKey(false, false) :
                 IndexType.createNonUnique(false, false, false));
 
         this.cctx = cctx;
         ctx = cctx.kernalContext();
-        log = ctx.log(getClass());
+        this.log = log;
 
         this.pk = pk;
         this.affinityKey = affinityKey;
@@ -223,8 +224,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param inlineSize Inline size.
      * @param segmentsCnt Count of tree segments.
      * @param log Logger.
-     * @throws IgniteCheckedException If failed.
      * @return Index.
+     * @throws IgniteCheckedException If failed.
      */
     public static H2TreeIndex createIndex(
         GridCacheContext<?, ?> cctx,
@@ -316,7 +317,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         IndexColumnsInfo idxColsInfo = useUnwrappedCols ? unwrappedColsInfo : wrappedColsInfo;
 
-        return new H2TreeIndex(cctx, tbl, idxName, pk, affinityKey, idxColsInfo, treeName, segments);
+        return new H2TreeIndex(cctx, tbl, idxName, pk, affinityKey, idxColsInfo, treeName, segments, log);
     }
 
     /** {@inheritDoc} */
@@ -864,9 +865,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
      *
      */
     @SuppressWarnings({"PublicInnerClass", "AssignmentOrReturnOfFieldWithMutableType"})
-    /**
-     *
-     */
     public static class IndexColumnsInfo {
         /** */
         private final int inlineSize;

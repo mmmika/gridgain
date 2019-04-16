@@ -15,36 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query.h2.sql;
+package org.apache.ignite.testsuites;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-/**
- * SQL Array: (1, 2, ?, 'abc')
- */
-public class GridSqlValueRow extends GridSqlElement {
-    /**
-     * @param size Array size.
-     */
-    public GridSqlValueRow(int size) {
-        super(size == 0 ? Collections.emptyList() : new ArrayList<>(size));
-    }
-
-    /** {@inheritDoc}  */
-    @Override public String getSQL() {
-        if (size() == 0)
-            return "ROW ()";
-
-        StringBuilder buff = new StringBuilder("ROW (");
-
-        for (int i = 0; i < size(); i++) {
-            if (i > 0)
-                buff.append(", ");
-
-            buff.append(child(i).getSQL());
-        }
-
-        return buff.append(')').toString();
-    }
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+    H2InMemoryMultiThreadTestSuite.class,
+    H2InMemoryMultiThreadLazyTestSuite.class,
+/*  H2MultiThreadTestSuite.class,
+    H2PageStoreOffloadTestSuite.class,
+    H2MVStoreWithNetworkingTestSuite.class,
+    H2PageStoreDefragTestSuite.class,
+    H2PageStoreNoMVStoreTestSuite.class,*/
+})
+public class H2AllTestsSuite {
 }
+
