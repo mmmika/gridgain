@@ -26,6 +26,9 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
+import org.apache.ignite.internal.processors.cache.persistence.lockstack.HeapArrayLockStack;
+import org.apache.ignite.internal.processors.cache.persistence.lockstack.LockStack;
+import org.apache.ignite.internal.processors.cache.persistence.lockstack.StructureLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -60,6 +63,9 @@ public abstract class DataStructure implements PageLockListener {
     /** */
     protected ReuseList reuseList;
 
+    /** */
+    protected StructureLockTracker tracker;
+
     /**
      * @param cacheId Cache group ID.
      * @param pageMem Page memory.
@@ -75,7 +81,10 @@ public abstract class DataStructure implements PageLockListener {
         this.grpId = cacheId;
         this.pageMem = pageMem;
         this.wal = wal;
+        this.tracker = StructureLockTracker.createTracker("test");
     }
+
+    //protected abstract String name();
 
     /**
      * @return Cache group ID.
@@ -413,11 +422,11 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        // No-op.
+        tracker.onWriteLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        // No-op.
+        tracker.onWriteUnlock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
@@ -425,10 +434,10 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        // No-op.
+        tracker.onReadLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        // No-op.
+        tracker.onReadUnlock(cacheId, pageId, page, pageAddr);
     }
 }
