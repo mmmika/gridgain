@@ -37,19 +37,19 @@ public class StructureLockTracker implements PageLockListener {
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        // No-op.
+        lockTracker.get().beforeWriteLock(cacheId, pageId);
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().readLock(cacheId, pageId);
+        lockTracker.get().writeLock(cacheId, pageId);
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().readUnlock(cacheId, pageId);
+        lockTracker.get().writeUnLock(cacheId, pageId);
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        // No-op.
+        lockTracker.get().beforeReadLock(cacheId, pageId);
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
