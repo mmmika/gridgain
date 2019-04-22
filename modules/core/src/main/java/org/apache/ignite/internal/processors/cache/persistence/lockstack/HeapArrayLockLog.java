@@ -101,10 +101,11 @@ public class HeapArrayLockLog implements LockLog {
         if (holdedLockCnt == 0)
             reset();
 
-        this.cacheId = 0;
-        this.pageId = 0;
-        this.op = 0;
-
+        if (this.pageId == pageId && this.cacheId == cacheId) {
+            this.cacheId = 0;
+            this.pageId = 0;
+            this.op = 0;
+        }
     }
 
     private void reset() {
