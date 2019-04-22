@@ -27,10 +27,6 @@ public class HeapArrayLockLog implements LockLog {
 
     private final String name;
 
-    public static void main(String[] args) {
-        System.out.println(U.hexInt(LOCK_IDX_MASK));
-        System.out.println(U.hexInt(LOCK_OP_MASK));
-    }
 
     public HeapArrayLockLog(String name, long threadId) {
         this.name = "[name=" + name + ", thread=" + threadId + "]";
@@ -103,6 +99,9 @@ public class HeapArrayLockLog implements LockLog {
 
         sb.a(name).a("\n");
 
+        if (headIdx == 0)
+            return sb.a("[Empty]").toString();
+
         for (int i = 0; i < headIdx; i +=2) {
             SB tab = new SB();
 
@@ -113,9 +112,6 @@ public class HeapArrayLockLog implements LockLog {
             int idx = ((int)(metaOnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
 
             assert idx >= 0;
-
-            for (int j = 1; j < idx; j ++)
-                tab.a("\t");
 
             long pageId = arrPageIds[i];
 

@@ -14,6 +14,4 @@ public interface LockLog {
     int poistionIdx();
 
     int capacity();
-
-
 }

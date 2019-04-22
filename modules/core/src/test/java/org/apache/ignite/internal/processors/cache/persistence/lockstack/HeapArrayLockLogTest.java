@@ -1,6 +1,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.lockstack;
 
 import java.util.NoSuchElementException;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -36,9 +37,35 @@ public class HeapArrayLockLogTest {
 
         System.out.println(lock);
 
+        lock.readLock(cacheId, pageId1);
+
+        System.out.println(lock);
+
+        lock.readLock(cacheId, pageId2);
+
+        System.out.println(lock);
+
+        lock.readLock(cacheId, pageId3);
+
+        System.out.println(lock);
+
+        lock.readUnlock(cacheId, pageId3);
+
+        System.out.println(lock);
+
+        lock.readUnlock(cacheId, pageId2);
+
+        System.out.println(lock);
+
         lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
+
+        lock.readUnlock(cacheId, pageId1);
+
+        System.out.println(lock);
+
+        Assert.assertEquals(0, lock.poistionIdx());
     }
 
     @Test
@@ -196,26 +223,6 @@ public class HeapArrayLockLogTest {
     }
 
     @Test
-    public void testExcpetionOnEmpty() {
-        LockLog lock = create("test-name");
-
-        int cacheId = 123;
-        int pageId1 = 1;
-
-        boolean excpetion = false;
-
-        try {
-            lock.readUnlock(cacheId, pageId1);
-        }
-        catch (NoSuchElementException e) {
-            excpetion = true;
-        }
-
-        if (!excpetion)
-            fail();
-    }
-
-    @Test
     public void testStackOverflow() {
         LockLog lock = create("test-name");
 
@@ -226,7 +233,7 @@ public class HeapArrayLockLogTest {
         try {
             int pageId = pageId1;
 
-            while (pageId < 1000) {
+            while (pageId < 10_000) {
                 lock.readLock(cacheId, pageId);
 
                 pageId++;
