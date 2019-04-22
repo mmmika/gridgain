@@ -11,7 +11,6 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockLog implements LockLog {
     private int headIdx;
-    private int maxHeadIdx;
     private int holdedLockCnt;
 
     private static final int OP_OFFSET = 16;
