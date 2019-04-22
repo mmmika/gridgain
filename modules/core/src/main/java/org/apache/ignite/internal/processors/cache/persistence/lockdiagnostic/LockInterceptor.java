@@ -1,6 +1,4 @@
-package org.apache.ignite.internal.processors.cache.persistence.lockstack;
-
-import org.apache.ignite.IgniteException;
+package org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic;
 
 public interface LockInterceptor {
     void beforeReadLock(int cacheId, long pageId);
