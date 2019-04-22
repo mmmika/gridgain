@@ -10,7 +10,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockLog implements LockLog {
+public class HeapArrayLockLog implements LockInterceptor {
     private int headIdx;
     private int holdedLockCnt;
 
@@ -113,14 +113,6 @@ public class HeapArrayLockLog implements LockLog {
             arrPageIds[i] = 0;
 
         headIdx = 0;
-    }
-
-    @Override public int poistionIdx() {
-        return headIdx / 2;
-    }
-
-    @Override public int capacity() {
-        return arrPageIds.length / 2;
     }
 
     /** {@inheritDoc} */

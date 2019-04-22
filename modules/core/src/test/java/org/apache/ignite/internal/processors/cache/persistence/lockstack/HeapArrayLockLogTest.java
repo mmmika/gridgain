@@ -1,6 +1,5 @@
 package org.apache.ignite.internal.processors.cache.persistence.lockstack;
 
-import java.util.NoSuchElementException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -10,7 +9,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void testSimple() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -70,7 +69,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void testUnlockInTheMiddle() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -104,7 +103,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void  testUnlockTwoInTheMiddle() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -159,7 +158,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void testUnlockInTheDowm() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -193,7 +192,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void testUnlockTwoInTheDown() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -236,7 +235,7 @@ public class HeapArrayLockLogTest {
 
     @Test
     public void testStackOverflow() {
-        LockLog lock = create("test-name");
+        LockInterceptor lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -261,7 +260,7 @@ public class HeapArrayLockLogTest {
             fail();
     }
 
-    private LockLog create(String name) {
+    private LockInterceptor create(String name) {
         return new HeapArrayLockLog(name, Thread.currentThread().getId());
     }
 }

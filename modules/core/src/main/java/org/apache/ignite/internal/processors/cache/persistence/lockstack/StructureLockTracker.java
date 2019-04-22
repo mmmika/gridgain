@@ -8,16 +8,16 @@ public class StructureLockTracker implements PageLockListener {
 
     private final String structureName;
 
-    private final Map<Long, LockLog> threadStacks = new ConcurrentHashMap<>();
+    private final Map<Long, LockInterceptor> threadStacks = new ConcurrentHashMap<>();
 
     /** */
-    private final ThreadLocal<LockLog> lockTracker = ThreadLocal.withInitial(() -> {
+    private final ThreadLocal<LockInterceptor> lockTracker = ThreadLocal.withInitial(() -> {
         Thread thread = Thread.currentThread();
 
         String threadName = thread.getName();
         long threadId = thread.getId();
 
-        LockLog stack = createLockStack(threadName + " - " + name(), threadId);
+        LockInterceptor stack = createLockStack(threadName + "[" + threadId + "]" + " - " + name());
 
         threadStacks.put(threadId, stack);
 
@@ -60,8 +60,9 @@ public class StructureLockTracker implements PageLockListener {
         lockTracker.get().readUnlock(cacheId, pageId);
     }
 
-    private LockLog createLockStack(String name, long threadId) {
-        //return new OffHeapLockLog(name, threadId);
-        return new HeapArrayLockLog(name, threadId);
+    private LockInterceptor createLockStack(String name) {
+        //return new OffHeapLockInterceptor(name, threadId);
+        //return new HeapArrayLockLog(name, threadId);
+        return new HeapArrayLockStack(name);
     }
 }
