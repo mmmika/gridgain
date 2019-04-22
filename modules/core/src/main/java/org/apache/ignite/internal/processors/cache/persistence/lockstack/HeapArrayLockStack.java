@@ -90,6 +90,12 @@ public class HeapArrayLockStack implements LockInterceptor {
 
             if (val == pageId) {
                 arrPageIds[headIdx] = 0;
+
+                //Reset head to the first not empty element.
+                do {
+                    headIdx--;
+                }
+                while (arrPageIds[headIdx] == 0);
             }
             else {
                 for (int i = last - 1; i >= 0; i--) {
@@ -139,7 +145,7 @@ public class HeapArrayLockStack implements LockInterceptor {
             else if (op == BEFORE_WRITE_LOCK)
                 str = "obtain write lock";
 
-            res.a("-->>> try " + str + ", " + pageIdToString(nextPage) + "\n");
+            res.a(">>> try " + str + ", " + pageIdToString(nextPage) + "\n");
         }
 
         for (int i = headIdx; i >= 0; i--) {
