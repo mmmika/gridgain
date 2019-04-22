@@ -26,8 +26,6 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
-import org.apache.ignite.internal.processors.cache.persistence.lockstack.HeapArrayLockStack;
-import org.apache.ignite.internal.processors.cache.persistence.lockstack.LockStack;
 import org.apache.ignite.internal.processors.cache.persistence.lockstack.StructureLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;

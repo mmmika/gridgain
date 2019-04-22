@@ -8,16 +8,16 @@ public class StructureLockTracker implements PageLockListener {
 
     private final String structureName;
 
-    private final Map<Long, LockStack> threadStacks = new ConcurrentHashMap<>();
+    private final Map<Long, LockLog> threadStacks = new ConcurrentHashMap<>();
 
     /** */
-    private final ThreadLocal<LockStack> lockTracker = ThreadLocal.withInitial(() -> {
+    private final ThreadLocal<LockLog> lockTracker = ThreadLocal.withInitial(() -> {
         Thread thread = Thread.currentThread();
 
         String threadName = thread.getName();
         long threadId = thread.getId();
 
-        LockStack stack = createLockStack(threadName + " - " + name(), threadId);
+        LockLog stack = createLockStack(threadName + " - " + name(), threadId);
 
         threadStacks.put(threadId, stack);
 
@@ -41,11 +41,11 @@ public class StructureLockTracker implements PageLockListener {
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().push(cacheId, pageId, LockStack.WRITE);
+        lockTracker.get().readLock(cacheId, pageId);
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().pop(cacheId, pageId, LockStack.WRITE);
+        lockTracker.get().readUnlock(cacheId, pageId);
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
@@ -53,15 +53,15 @@ public class StructureLockTracker implements PageLockListener {
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().push(cacheId, pageId, LockStack.READ);
+        lockTracker.get().readLock(cacheId, pageId);
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().pop(cacheId, pageId, LockStack.READ);
+        lockTracker.get().readUnlock(cacheId, pageId);
     }
 
-    private LockStack createLockStack(String name, long threadId) {
-        //return new OffHeapLockStack(name, threadId);
-        return new HeapArrayLockStack(name, threadId);
+    private LockLog createLockStack(String name, long threadId) {
+        //return new OffHeapLockLog(name, threadId);
+        return new HeapArrayLockLog(name, threadId);
     }
 }

@@ -1,86 +1,83 @@
 package org.apache.ignite.internal.processors.cache.persistence.lockstack;
 
 import java.util.NoSuchElementException;
-import java.util.Random;
-import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.persistence.lockstack.LockStack.READ;
-import static org.junit.Assert.*;
+import static org.junit.Assert.fail;
 
-public class HeapArrayLockStackTest {
+public class HeapArrayLockLogTest {
 
     @Test
     public void testSimple() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
         int pageId2 = 2;
         int pageId3 = 3;
 
-        lock.push(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId2, READ);
+        lock.readLock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId3, READ);
+        lock.readLock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId3, READ);
+        lock.readUnlock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId2, READ);
+        lock.readUnlock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId1, READ);
+        lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
     }
 
     @Test
     public void testUnlockInTheMiddle() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
         int pageId2 = 2;
         int pageId3 = 3;
 
-        lock.push(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId2, READ);
+        lock.readLock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId3, READ);
+        lock.readLock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId2, READ);
+        lock.readUnlock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId3, READ);
+        lock.readUnlock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId1, READ);
+        lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
     }
 
     @Test
     public void  testUnlockTwoInTheMiddle() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -88,75 +85,76 @@ public class HeapArrayLockStackTest {
         int pageId3 = 3;
         int pageId4 = 4;
 
-        lock.push(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId2, READ);
+        lock.readLock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId3, READ);
+        lock.readLock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId4, READ);
+        lock.readLock(cacheId, pageId4);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId2, READ);
+        lock.readUnlock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId3, READ);
+        lock.readUnlock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId4, READ);
+        lock.readUnlock(cacheId, pageId4);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId1, READ);
+        lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
     }
 
     @Test
     public void testUnlockInTheDowm() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
         int pageId2 = 2;
         int pageId3 = 3;
 
-        lock.push(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId2, READ);
-        System.out.println(lock);
-
-        lock.push(cacheId, pageId3, READ);
+        lock.readLock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId3, READ);
+        lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId2, READ);
+        lock.readUnlock(cacheId, pageId3);
+
+        System.out.println(lock);
+
+        lock.readUnlock(cacheId, pageId2);
 
         System.out.println(lock);
     }
 
     @Test
     public void testUnlockTwoInTheDown() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -164,42 +162,42 @@ public class HeapArrayLockStackTest {
         int pageId3 = 3;
         int pageId4 = 4;
 
-        lock.push(cacheId, pageId1, READ);
+        lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId2, READ);
+        lock.readLock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId3, READ);
+        lock.readLock(cacheId, pageId3);
 
         System.out.println(lock);
 
-        lock.push(cacheId, pageId4, READ);
+        lock.readLock(cacheId, pageId4);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId2, READ);
+        lock.readUnlock(cacheId, pageId2);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId1, READ);
+        lock.readUnlock(cacheId, pageId1);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId4, READ);
+        lock.readUnlock(cacheId, pageId4);
 
         System.out.println(lock);
 
-        lock.pop(cacheId, pageId3, READ);
+        lock.readUnlock(cacheId, pageId3);
 
         System.out.println(lock);
     }
 
     @Test
     public void testExcpetionOnEmpty() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -207,7 +205,7 @@ public class HeapArrayLockStackTest {
         boolean excpetion = false;
 
         try {
-            lock.pop(cacheId, pageId1, READ);
+            lock.readUnlock(cacheId, pageId1);
         }
         catch (NoSuchElementException e) {
             excpetion = true;
@@ -219,7 +217,7 @@ public class HeapArrayLockStackTest {
 
     @Test
     public void testStackOverflow() {
-        LockStack lock = create("test-name");
+        LockLog lock = create("test-name");
 
         int cacheId = 123;
         int pageId1 = 1;
@@ -229,7 +227,7 @@ public class HeapArrayLockStackTest {
             int pageId = pageId1;
 
             while (pageId < 1000) {
-                lock.push(cacheId, pageId, READ);
+                lock.readLock(cacheId, pageId);
 
                 pageId++;
             }
@@ -242,7 +240,7 @@ public class HeapArrayLockStackTest {
             fail();
     }
 
-    private LockStack create(String name) {
-        return new HeapArrayLockStack(name, Thread.currentThread().getId());
+    private LockLog create(String name) {
+        return new HeapArrayLockLog(name, Thread.currentThread().getId());
     }
 }
