@@ -19,7 +19,7 @@ public class HeapArrayLockStack implements LockStack {
     private static final int LOCK_OP_MASK = 0b0000_0000_0000_0011;
 
     private final long[] arrPageIds = new long[64];
-    private final long[] arrMeta = new long[64];
+    private final long[] arrMeta = new long[arrPageIds.length * 2];
 
     private final String name;
 
@@ -35,7 +35,7 @@ public class HeapArrayLockStack implements LockStack {
     @Override public void push(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if (headIdx + 2 > arrPageIds.length)
+        if (headIdx + 1 > arrPageIds.length)
             throw new StackOverflowError("Stack overflow, size:" + arrPageIds.length);
 
         long pageId0 = arrPageIds[headIdx];
@@ -43,40 +43,45 @@ public class HeapArrayLockStack implements LockStack {
         assert pageId0 == 0L : "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
 
         arrPageIds[headIdx] = pageId;
-        arrMeta[headIdx] = meta(cacheId,
-            (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
 
-        headIdx += 2;
-        maxHeadIdx += 2;
+        int curIdx = headIdx << OP_OFFSET & LOCK_IDX_MASK;
+
+        //System.out.println("curIdx=" + Integer.toBinaryString(curIdx));
+
+        long meta = meta(cacheId, curIdx | flags);
+
+        //System.out.println("meta=" + Long.toBinaryString(meta));
+
+        arrMeta[(headIdx * 2)] = meta;
+
+        headIdx = ++maxHeadIdx;
     }
 
     private long meta(int cacheId, int flags) {
         long major = ((long)flags) << 32;
+
         long minor = (long)cacheId;
-        return  major | minor;
+
+        return major | minor;
     }
 
     @Override public void pop(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if (headIdx > 2) {
-            int last = headIdx - 2;
+        if (headIdx > 1) {
+            int last = headIdx - 1;
 
             long val = arrPageIds[last];
 
             if (val == pageId) {
-                arrPageIds[last + 1] = pageId;
-                arrMeta[last + 1] = meta(cacheId,
-                    (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
+                headIdx--;
 
-                headIdx -= 2;
+                arrMeta[(last * 2) + 1] = meta(cacheId, (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
             }
             else {
-                for (int i = last - 2; i >= 0; i--) {
+                for (int i = last - 1; i >= 0; i--) {
                     if (arrPageIds[i] == pageId) {
-                        arrPageIds[i + 1] = pageId;
-                        arrMeta[i + 1] = meta(cacheId,
-                            (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
+                        arrMeta[(i * 2) + 1] = meta(cacheId, ((headIdx - 1) << OP_OFFSET & LOCK_IDX_MASK) | flags);
 
                         return;
                     }
@@ -97,7 +102,8 @@ public class HeapArrayLockStack implements LockStack {
             if (val == pageId) {
                 for (int i = 0; i < maxHeadIdx; i++) {
                     arrPageIds[i] = 0;
-                    arrMeta[i] = 0;
+                    arrMeta[i * 2] = 0;
+                    arrMeta[(i * 2) + 1] = 0;
                 }
 
                 headIdx = 0;
@@ -110,7 +116,7 @@ public class HeapArrayLockStack implements LockStack {
     }
 
     @Override public int poistionIdx() {
-        return headIdx / 2;
+        return headIdx;
     }
 
     @Override public int capacity() {
@@ -123,10 +129,10 @@ public class HeapArrayLockStack implements LockStack {
 
         sb.a(name).a("\n");
 
-        for (int i = 0; i < maxHeadIdx; i += 2) {
+        for (int i = 0; i < maxHeadIdx; i ++) {
             SB tab = new SB();
 
-            long metaOnLock = arrMeta[i + 1];
+            long metaOnLock = arrMeta[(i * 2)];
 
             assert metaOnLock != 0;
 
@@ -134,7 +140,7 @@ public class HeapArrayLockStack implements LockStack {
 
             assert idx >= 0;
 
-            for (int j = -1; j < idx; j += 2)
+            for (int j = 0; j < idx; j ++)
                 tab.a("\t");
 
             long pageIdOnLock = arrPageIds[i];
@@ -151,21 +157,20 @@ public class HeapArrayLockStack implements LockStack {
 
         }
 
-        for (int i = maxHeadIdx - 1; i > 0; i -= 2) {
+        for (int i = maxHeadIdx - 1; i > 0; i --) {
             SB tab = new SB();
+
+            long metaOnUnLock = arrMeta[(i * 2) + 1];
+
+            if (metaOnUnLock == 0)
+                continue;
 
             long pageIdOnUnLock = arrPageIds[i];
 
-            if (pageIdOnUnLock == 0)
-                continue;
-
-            long metaOnUnLock = arrMeta[i + 1];
-
-            assert metaOnUnLock != 0;
-
+            int idx0 = ((int)(arrMeta[(i * 2)] >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
             int idx = ((int)(metaOnUnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
 
-            for (int j = -1; j < idx; j += 2)
+            for (int j = 0; j < idx0; j ++)
                 tab.a("\t");
 
             int op = (int)((metaOnUnLock >> 32) & LOCK_OP_MASK);
