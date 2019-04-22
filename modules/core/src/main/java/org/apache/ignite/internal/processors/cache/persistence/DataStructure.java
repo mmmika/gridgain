@@ -26,7 +26,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
-import org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic.StructureLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic.DataStructurePageLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -62,7 +62,10 @@ public abstract class DataStructure implements PageLockListener {
     protected ReuseList reuseList;
 
     /** */
-    protected StructureLockTracker tracker;
+    protected final DataStructurePageLockTracker tracker;
+
+    /** Name (for debug purposes). */
+    protected final String name;
 
     /**
      * @param cacheId Cache group ID.
@@ -72,14 +75,16 @@ public abstract class DataStructure implements PageLockListener {
     public DataStructure(
         int cacheId,
         PageMemory pageMem,
-        IgniteWriteAheadLogManager wal
+        IgniteWriteAheadLogManager wal,
+        String name
     ) {
         assert pageMem != null;
 
         this.grpId = cacheId;
         this.pageMem = pageMem;
         this.wal = wal;
-        this.tracker = StructureLockTracker.createTracker("test");
+        this.tracker = DataStructurePageLockTracker.createTracker(name);
+        this.name = name;
     }
 
     //protected abstract String name();
@@ -416,7 +421,7 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        // No-op.
+        tracker.onBeforeWriteLock(cacheId, pageId, page);
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
@@ -428,7 +433,7 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        // No-op.
+        tracker.onBeforeReadLock(cacheId, pageId, page);
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {

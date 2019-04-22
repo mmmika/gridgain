@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 
-public class StructureLockTracker implements PageLockListener {
+public class DataStructurePageLockTracker implements PageLockListener {
 
     private final String structureName;
 
@@ -24,12 +24,12 @@ public class StructureLockTracker implements PageLockListener {
         return stack;
     });
 
-    private StructureLockTracker(String structureName) {
+    private DataStructurePageLockTracker(String structureName) {
         this.structureName = structureName;
     }
 
-    public static StructureLockTracker createTracker(String structureName) {
-        return new StructureLockTracker(structureName);
+    public static DataStructurePageLockTracker createTracker(String structureName) {
+        return new DataStructurePageLockTracker(structureName);
     }
 
     public String name() {
