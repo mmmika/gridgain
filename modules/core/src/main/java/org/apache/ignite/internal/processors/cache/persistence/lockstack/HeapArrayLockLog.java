@@ -1,12 +1,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.lockstack;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
@@ -20,7 +16,7 @@ public class HeapArrayLockLog implements LockLog {
 
     private static final int OP_OFFSET = 16;
     private static final int LOCK_IDX_MASK = 0xFFFF0000;
-    private static final int LOCK_OP_MASK = 0b0000_0000_0000_0011;
+    private static final int LOCK_OP_MASK = 0x000000000000FF;
 
     private static final int READ_LOCK = 1;
     private static final int READ_UNLOCK = 2;
@@ -28,6 +24,10 @@ public class HeapArrayLockLog implements LockLog {
     private static final int WRITE_UNLOCK = 4;
     private static final int BEFORE_READ_LOCK = 5;
     private static final int BEFORE_WRITE_LOCK = 6;
+
+    private int cacheId;
+    private long pageId;
+    private int op;
 
     private final long[] arrPageIds = new long[1024 * 2];
 
@@ -38,12 +38,24 @@ public class HeapArrayLockLog implements LockLog {
         this.name = "[name=" + name + ", thread=" + threadId + "]";
     }
 
+    @Override public void beforeReadLock(int cacheId, long pageId) {
+        this.cacheId = cacheId;
+        this.pageId = pageId;
+        this.op = BEFORE_READ_LOCK;
+    }
+
     @Override public void readLock(int cacheId, long pageId) {
         log(cacheId, pageId, READ_LOCK);
     }
 
     @Override public void readUnlock(int cacheId, long pageId) {
         log(cacheId, pageId, READ_UNLOCK);
+    }
+
+    @Override public void beforeWriteLock(int cacheId, long pageId) {
+        this.cacheId = cacheId;
+        this.pageId = pageId;
+        this.op = BEFORE_WRITE_LOCK;
     }
 
     @Override public void writeLock(int cacheId, long pageId) {
@@ -57,7 +69,7 @@ public class HeapArrayLockLog implements LockLog {
     private void log(int cacheId, long pageId, int flags){
         assert pageId > 0;
 
-        if (headIdx + 1 > arrPageIds.length)
+        if (headIdx + 2 > arrPageIds.length)
             throw new StackOverflowError("Stack overflow, size:" + arrPageIds.length +
                 "\n cacheId=" + cacheId + ", pageId=" + pageId + ", flags=" + flags +
                 "\n" + toString());
@@ -88,6 +100,11 @@ public class HeapArrayLockLog implements LockLog {
 
         if (holdedLockCnt == 0)
             reset();
+
+        this.cacheId = 0;
+        this.pageId = 0;
+        this.op = 0;
+
     }
 
     private void reset() {
@@ -111,14 +128,11 @@ public class HeapArrayLockLog implements LockLog {
 
         res.a(name).a("\n");
 
-        if (headIdx == 0)
-            return res.a("[Empty]").toString();
-
         Map<Long, LockState> holdetLocks = new LinkedHashMap<>();
 
         SB logLocksStr = new SB();
 
-        for (int i = 0; i < headIdx; i +=2) {
+        for (int i = 0; i < headIdx; i += 2) {
             long metaOnLock = arrPageIds[i + 1];
 
             assert metaOnLock != 0;
@@ -136,26 +150,20 @@ public class HeapArrayLockLog implements LockLog {
 
             switch (op) {
                 case READ_LOCK:
-                    opStr = "Read lock  ";
+                    opStr = "Read lock    ";
                     break;
                 case READ_UNLOCK:
-                    opStr = "Read unlock";
-                    break;
-                case BEFORE_READ_LOCK:
-                    opStr = "Try read lock";
+                    opStr = "Read unlock  ";
                     break;
                 case WRITE_LOCK:
-                    opStr = "Write lock  ";
+                    opStr = "Write lock    ";
                     break;
                 case WRITE_UNLOCK:
-                    opStr = "Write unlock";
-                    break;
-                case BEFORE_WRITE_LOCK:
-                    opStr = "Try write unlock";
+                    opStr = "Write unlock  ";
                     break;
             }
 
-            if (op == READ_LOCK || op == WRITE_LOCK) {
+            if (op == READ_LOCK || op == WRITE_LOCK || op == BEFORE_READ_LOCK) {
                 LockState state = holdetLocks.get(pageId);
 
                 if (state == null)
@@ -190,6 +198,24 @@ public class HeapArrayLockLog implements LockLog {
                     + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
                     + ", flags=" + hexInt(flag(pageId)) + "]\n");
             }
+        }
+
+        if (pageId != 0) {
+            String opStr = "N/A";
+
+            switch (op) {
+                case BEFORE_READ_LOCK:
+                    opStr = "Try read lock    ";
+                    break;
+                case BEFORE_WRITE_LOCK:
+                    opStr = "Try write lock  ";
+                    break;
+            }
+
+            logLocksStr.a("-> " + opStr + " pageId=" + pageId + ", cacheId=" + cacheId
+                + " [pageIdxHex=" + hexLong(pageId)
+                + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
+                + ", flags=" + hexInt(flag(pageId)) + "]\n");
         }
 
         SB holdetLocksStr = new SB();

@@ -112,11 +112,23 @@ public class HeapArrayLockLogTest {
         int pageId3 = 3;
         int pageId4 = 4;
 
+        lock.beforeReadLock(cacheId, pageId1);
+
+        System.out.println(lock);
+
         lock.readLock(cacheId, pageId1);
 
         System.out.println(lock);
 
+        lock.beforeReadLock(cacheId, pageId2);
+
+        System.out.println(lock);
+
         lock.readLock(cacheId, pageId2);
+
+        System.out.println(lock);
+
+        lock.beforeReadLock(cacheId, pageId3);
 
         System.out.println(lock);
 
@@ -240,6 +252,8 @@ public class HeapArrayLockLogTest {
             }
         }
         catch (StackOverflowError e) {
+            e.printStackTrace();
+
             excpetion = true;
         }
 

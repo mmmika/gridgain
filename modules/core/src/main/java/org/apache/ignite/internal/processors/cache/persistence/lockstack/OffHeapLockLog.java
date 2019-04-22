@@ -12,11 +12,19 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class OffHeapLockLog implements LockLog {
+    @Override public void beforeReadLock(int cacheId, long pageId) {
+
+    }
+
     @Override public void readLock(int cacheId, long pageId) {
 
     }
 
     @Override public void readUnlock(int cacheId, long pageId) {
+
+    }
+
+    @Override public void beforeWriteLock(int cacheId, long pageId) {
 
     }
 
