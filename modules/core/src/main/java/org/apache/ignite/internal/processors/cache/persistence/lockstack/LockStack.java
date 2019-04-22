@@ -11,6 +11,6 @@ public interface LockStack {
 
     int capacity();
 
-    int READ = 0x0000_0001;
-    int WRITE = 0x0000_0002;
+    int READ = 0b0000_0000_0000_0001;
+    int WRITE = 0b0000_0000_0000_0010;
 }

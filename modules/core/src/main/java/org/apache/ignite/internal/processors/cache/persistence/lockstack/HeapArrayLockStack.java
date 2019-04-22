@@ -2,6 +2,7 @@ package org.apache.ignite.internal.processors.cache.persistence.lockstack;
 
 import java.util.NoSuchElementException;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
@@ -11,24 +12,30 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockStack implements LockStack {
     private int headIdx;
+    private int maxHeadIdx;
 
     private static final int OP_OFFSET = 16;
-    private static final int LOCK_OP_MASK = 0b1;
-    private static final int LOCK_OP_TYPE_MASK = 0b10;
+    private static final int LOCK_IDX_MASK = 0xFFFF0000;
+    private static final int LOCK_OP_MASK = 0b0000_0000_0000_0011;
 
     private final long[] arrPageIds = new long[64];
     private final long[] arrMeta = new long[64];
 
     private final String name;
 
+    public static void main(String[] args) {
+        System.out.println(U.hexInt(LOCK_IDX_MASK));
+        System.out.println(U.hexInt(LOCK_OP_MASK));
+    }
+
     public HeapArrayLockStack(String name, long threadId) {
-        this.name = name + " - " + threadId;
+        this.name = "name=" + name + " thread=" + threadId;
     }
 
     @Override public void push(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if (headIdx + 1 > arrPageIds.length)
+        if (headIdx + 2 > arrPageIds.length)
             throw new StackOverflowError("Stack overflow, size:" + arrPageIds.length);
 
         long pageId0 = arrPageIds[headIdx];
@@ -36,13 +43,17 @@ public class HeapArrayLockStack implements LockStack {
         assert pageId0 == 0L : "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
 
         arrPageIds[headIdx] = pageId;
-        arrMeta[headIdx] = meta(cacheId, flags);
+        arrMeta[headIdx] = meta(cacheId,
+            (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
 
         headIdx += 2;
+        maxHeadIdx += 2;
     }
 
     private long meta(int cacheId, int flags) {
-        return (((long)(flags & OP_OFFSET) << 32)) | ((long)cacheId);
+        long major = ((long)flags) << 32;
+        long minor = (long)cacheId;
+        return  major | minor;
     }
 
     @Override public void pop(int cacheId, long pageId, int flags) {
@@ -55,15 +66,17 @@ public class HeapArrayLockStack implements LockStack {
 
             if (val == pageId) {
                 arrPageIds[last + 1] = pageId;
-                arrMeta[last + 1] = meta(cacheId, flags);
+                arrMeta[last + 1] = meta(cacheId,
+                    (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
 
                 headIdx -= 2;
             }
             else {
                 for (int i = last - 2; i >= 0; i--) {
                     if (arrPageIds[i] == pageId) {
-                        arrPageIds[i] = pageId;
-                        arrMeta[i] = meta(cacheId, flags);
+                        arrPageIds[i + 1] = pageId;
+                        arrMeta[i + 1] = meta(cacheId,
+                            (headIdx << OP_OFFSET & LOCK_IDX_MASK) | flags);
 
                         return;
                     }
@@ -82,10 +95,13 @@ public class HeapArrayLockStack implements LockStack {
                         cacheId + ", pageId=" + pageId + ", flags=" + hexInt(flags));
 
             if (val == pageId) {
-                arrPageIds[0] = 0;
-                arrMeta[0] = 0;
+                for (int i = 0; i < maxHeadIdx; i++) {
+                    arrPageIds[i] = 0;
+                    arrMeta[i] = 0;
+                }
 
                 headIdx = 0;
+                maxHeadIdx = 0;
             }
             else
                 // Corner case, we have only one elemnt on stack, but it not equals pageId for pop.
@@ -107,40 +123,60 @@ public class HeapArrayLockStack implements LockStack {
 
         sb.a(name).a("\n");
 
-        for (int i = 0; i < capacity(); i += 2) {
+        for (int i = 0; i < maxHeadIdx; i += 2) {
             SB tab = new SB();
 
-            for (int j = -1; j < i; j += 2)
+            long metaOnLock = arrMeta[i + 1];
+
+            assert metaOnLock != 0;
+
+            int idx = ((int)(metaOnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
+
+            assert idx >= 0;
+
+            for (int j = -1; j < idx; j += 2)
                 tab.a("\t");
 
             long pageIdOnLock = arrPageIds[i];
-            long pageIdOnUnLock = arrPageIds[i + 1];
 
-            if (pageIdOnLock == 0) {
-                sb.a("L=" + i + "-> [empty]\n" + tab);
-
-                continue;
-            }
-
-            long metaOnLock = arrMeta[i];
-            long metaOnUnLock = arrMeta[i + 1];
-
-            int op = (int)((metaOnLock >> 32) & OP_OFFSET);
+            int op = (int)((metaOnLock >> 32) & LOCK_OP_MASK);
             int cacheId = (int)(metaOnLock);
 
             String opStr = op == LockStack.READ ? "Read lock" : (op == LockStack.WRITE ? "Write lock" : "N/A");
 
-            sb.a(tab + "L=" + (i / 2) + " -> " + opStr + " pageId=" + pageIdOnLock + ", cacheId=" + cacheId
+            sb.a(tab + "L=" + idx + " -> " + opStr + " pageId=" + pageIdOnLock + ", cacheId=" + cacheId
                 + " [pageIdxHex=" + hexLong(pageIdOnLock)
                 + ", partId=" + pageId(pageIdOnLock) + ", pageIdx=" + pageIndex(pageIdOnLock)
                 + ", flags=" + hexInt(flag(pageIdOnLock)) + "]\n");
 
-            if (metaOnUnLock != 0) {
-                sb.a(tab + "L=" + (i / 2) + " <- " + opStr + " pageId=" + pageIdOnUnLock + ", cacheId=" + cacheId
-                    + " [pageIdxHex=" + hexLong(pageIdOnUnLock)
-                    + ", partId=" + pageId(pageIdOnUnLock) + ", pageIdx=" + pageIndex(pageIdOnUnLock)
-                    + ", flags=" + hexInt(flag(pageIdOnUnLock)) + "]\n");
-            }
+        }
+
+        for (int i = maxHeadIdx - 1; i > 0; i -= 2) {
+            SB tab = new SB();
+
+            long pageIdOnUnLock = arrPageIds[i];
+
+            if (pageIdOnUnLock == 0)
+                continue;
+
+            long metaOnUnLock = arrMeta[i + 1];
+
+            assert metaOnUnLock != 0;
+
+            int idx = ((int)(metaOnUnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
+
+            for (int j = -1; j < idx; j += 2)
+                tab.a("\t");
+
+            int op = (int)((metaOnUnLock >> 32) & LOCK_OP_MASK);
+            int cacheId = (int)(metaOnUnLock);
+
+            String opStr = op == LockStack.READ ? "Read lock" : (op == LockStack.WRITE ? "Write lock" : "N/A");
+
+            sb.a(tab + "L=" + idx + " <- " + opStr + " pageId=" + pageIdOnUnLock + ", cacheId=" + cacheId
+                + " [pageIdxHex=" + hexLong(pageIdOnUnLock)
+                + ", partId=" + pageId(pageIdOnUnLock) + ", pageIdx=" + pageIndex(pageIdOnUnLock)
+                + ", flags=" + hexInt(flag(pageIdOnUnLock)) + "]\n");
         }
 
         return sb.toString();

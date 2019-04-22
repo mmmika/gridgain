@@ -20,32 +20,26 @@ public class HeapArrayLockStackTest {
         int pageId3 = 3;
 
         lock.push(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 0);
 
         System.out.println(lock);
     }
@@ -60,32 +54,26 @@ public class HeapArrayLockStackTest {
         int pageId3 = 3;
 
         lock.push(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 0);
 
         System.out.println(lock);
     }
@@ -101,42 +89,34 @@ public class HeapArrayLockStackTest {
         int pageId4 = 4;
 
         lock.push(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId4, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId4, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 0);
 
         System.out.println(lock);
     }
@@ -151,32 +131,25 @@ public class HeapArrayLockStackTest {
         int pageId3 = 3;
 
         lock.push(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
-
         System.out.println(lock);
 
         lock.push(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 0);
 
         System.out.println(lock);
     }
@@ -192,42 +165,34 @@ public class HeapArrayLockStackTest {
         int pageId4 = 4;
 
         lock.push(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 1);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 2);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.push(cacheId, pageId4, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId2, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId1, READ);
-        Assert.assertEquals(lock.poistionIdx(), 4);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId4, READ);
-        Assert.assertEquals(lock.poistionIdx(), 3);
 
         System.out.println(lock);
 
         lock.pop(cacheId, pageId3, READ);
-        Assert.assertEquals(lock.poistionIdx(), 0);
 
         System.out.println(lock);
     }
