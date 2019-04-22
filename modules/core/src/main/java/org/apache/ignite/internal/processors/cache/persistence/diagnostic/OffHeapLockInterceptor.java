@@ -1,4 +1,4 @@
-package org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.util.GridUnsafe.getLong;

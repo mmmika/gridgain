@@ -1,4 +1,4 @@
-package org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.NoSuchElementException;
 import org.apache.ignite.internal.util.typedef.internal.SB;

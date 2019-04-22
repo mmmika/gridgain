@@ -1,4 +1,4 @@
-package org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 public interface LockInterceptor {
     void beforeReadLock(int cacheId, long pageId);

@@ -1,4 +1,4 @@
-package org.apache.ignite.internal.processors.cache.persistence.lockdiagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
