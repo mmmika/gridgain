@@ -61,4 +61,177 @@ public class HeapArrayLockStackTest {
 
         System.out.println(lockStack);
     }
+
+    @Test
+    public void testThreeReadPageLock_1() {
+        HeapArrayLockStack lockStack = new HeapArrayLockStack(Thread.currentThread().getName());
+
+        long pageId1 = 1;
+        long pageId2 = 11;
+        long pageId3 = 111;
+        long page1 = 2;
+        long page2 = 12;
+        long page3 = 122;
+        long pageAddr1 = 3;
+        long pageAddr2 = 13;
+        long pageAddr3 = 133;
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+    }
+
+    @Test
+    public void testThreeReadPageLock_2() {
+        HeapArrayLockStack lockStack = new HeapArrayLockStack(Thread.currentThread().getName());
+
+        long pageId1 = 1;
+        long pageId2 = 11;
+        long pageId3 = 111;
+        long page1 = 2;
+        long page2 = 12;
+        long page3 = 122;
+        long pageAddr1 = 3;
+        long pageAddr2 = 13;
+        long pageAddr3 = 133;
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        System.out.println(lockStack);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+    }
+
+    @Test
+    public void testThreeReadPageLock_3() {
+        HeapArrayLockStack lockStack = new HeapArrayLockStack(Thread.currentThread().getName());
+
+        long pageId1 = 1;
+        long pageId2 = 11;
+        long pageId3 = 111;
+        long page1 = 2;
+        long page2 = 12;
+        long page3 = 122;
+        long pageAddr1 = 3;
+        long pageAddr2 = 13;
+        long pageAddr3 = 133;
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+
+        System.out.println(lockStack);
+
+        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+
+        System.out.println(lockStack);
+    }
+
+    @Test
+    public void test() {
+        HeapArrayLockStack lockStack = new HeapArrayLockStack(Thread.currentThread().getName());
+
+        int stackSize = 2;
+        long start = System.currentTimeMillis();
+
+        for (int i = 0; i < stackSize; i++) {
+            int pageId = i + 1;
+
+            lockStack.onBeforeReadLock(CACHE_ID, pageId, pageId);
+
+            lockStack.onReadLock(CACHE_ID, pageId, pageId, pageId);
+        }
+
+        for (int i = stackSize; i > 0; i--) {
+            //int pageId = i;
+
+           // lockStack.onReadUnlock(CACHE_ID, pageId, pageId, pageId);
+        }
+
+        System.out.println((System.currentTimeMillis() - start) + " ms");
+    }
 }

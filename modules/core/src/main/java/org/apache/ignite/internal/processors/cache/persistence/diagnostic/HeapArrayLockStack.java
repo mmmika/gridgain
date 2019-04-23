@@ -90,13 +90,13 @@ public class HeapArrayLockStack implements PageLockListener {
             long val = arrPageIds[last];
 
             if (val == pageId) {
-                arrPageIds[headIdx] = 0;
+                arrPageIds[last] = 0;
 
                 //Reset head to the first not empty element.
                 do {
                     headIdx--;
                 }
-                while (arrPageIds[headIdx] == 0);
+                while (headIdx - 1 >= 0 && arrPageIds[headIdx - 1] == 0);
             }
             else {
                 for (int i = last - 1; i >= 0; i--) {

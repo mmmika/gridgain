@@ -35,8 +35,8 @@ public class HeapArrayLockLog implements PageLockListener {
     private final String name;
 
 
-    public HeapArrayLockLog(String name, long threadId) {
-        this.name = "[name=" + name + ", thread=" + threadId + "]";
+    public HeapArrayLockLog(String name) {
+        this.name = "name=" + name;
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
