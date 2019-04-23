@@ -69,7 +69,7 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
         @Param({"2", "4", "8", "16"})
         int stackSize;
 
-        @Param({"HeapArrayLockStack"})
+        @Param({"OffHeapLockStack"})
         String type;
 
         int cacheId = 123;
@@ -107,7 +107,7 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
             case "HeapArrayLockLog":
                 return new HeapArrayLockLog(name);
             case "OffHeapLockStack":
-                return new OffHeapLockStack();
+                return new OffHeapLockStack(name);
         }
 
         return null;
