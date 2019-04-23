@@ -207,9 +207,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <systemProperties>
+                    <systemPropertyVariables>
                         <user.language>en</user.language>
-                        <user.country>US</user.country>
+                        <user.region>US</user.region>
                         <h2.maxMemoryRows>100</h2.maxMemoryRows>
                         <h2.delayWrongPasswordMin>0</h2.delayWrongPasswordMin>
                         <h2.delayWrongPasswordMax>0</h2.delayWrongPasswordMax>
@@ -217,7 +217,7 @@
                         <h2.clientTraceDirectory>target/trace.db/</h2.clientTraceDirectory>
                         <h2.javaSystemCompiler>false</h2.javaSystemCompiler>
                         <!--<java.io.tmpdir>./target/temp</java.io.tmpdir>-->
-                    </systemProperties>
+                    </systemPropertyVariables>
                     <additionalClasspathElements>
                         <additionalClasspathElement>${project.build.outputDirectory}</additionalClasspathElement>
                         <additionalClasspathElement>${project.build.testOutputDirectory}</additionalClasspathElement>
