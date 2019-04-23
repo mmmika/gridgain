@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
+import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
@@ -13,32 +14,6 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockStack implements PageLockListener {
-    private int headIdx;
-
-    //Benchmark                                     (stackSize)              (type)   Mode  Cnt          Score         Error  Units
-    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10  112220367.940 ± 3489526.518  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockStack  thrpt   10   70455560.182 ± 3312950.796  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   44866501.588 ±  624434.909  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   24397179.687 ±  469696.820  ops/s
-
-    //Benchmark                                     (stackSize)              (type)   Mode  Cnt         Score         Error  Units
-    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10   9633344.414 ±  728236.796  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockStack  thrpt   10   4852075.852 ±  255843.100  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   2399365.642 ±   68528.195  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1165728.828 ±  120575.800  ops/s
-
-    //Benchmark                                     (stackSize)              (type)   Mode  Cnt         Score        Error  Units
-    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10  14279323.516 ± 141363.335  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockStack  thrpt   10   7076342.539 ±  90446.056  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   3546973.366 ±  59300.908  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1759634.526 ±  19412.998  ops/s
-
-    //Benchmark                                     (stackSize)              (type)   Mode  Cnt         Score         Error  Units
-    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10  13143263.758 ± 1241703.543  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockStack  thrpt   10   6666108.001 ±   94336.397  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   3235242.435 ±  147932.557  ops/s
-    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1680152.792 ±   12182.147  ops/s
-
     private static final int READ_LOCK = 1;
     private static final int READ_UNLOCK = 2;
     private static final int WRITE_LOCK = 3;
@@ -46,85 +21,123 @@ public class HeapArrayLockStack implements PageLockListener {
     private static final int BEFORE_READ_LOCK = 5;
     private static final int BEFORE_WRITE_LOCK = 6;
 
-    private final long[] arrPageIds = new long[64];
+    private static final int STACK_SIZE = 128;
 
     private final String name;
+
+    private int headIdx;
+
+    private final long[] arrPageIds;
 
     private long nextPage;
     private int op;
 
-    private AtomicBoolean locked = new AtomicBoolean();
+    private volatile boolean dump;
+
+    private volatile boolean locked;
 
     public HeapArrayLockStack(String name) {
         this.name = "name=" + name;
+        this.arrPageIds = new long[STACK_SIZE];
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        lock();
+        checkDump();
 
-        try {
-            nextPage = pageId;
-            op = BEFORE_WRITE_LOCK;
+        locked = true;
+        if (dump) {
+            locked = false;
+
+            onBeforeWriteLock(cacheId, pageId, page);
+
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        nextPage = pageId;
+        op = BEFORE_WRITE_LOCK;
+        locked = false;
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
+        checkDump();
 
-        try {
-            push(cacheId, pageId, WRITE_LOCK);
+        locked = true;
+        if (dump) {
+            locked = false;
+
+            onWriteLock(cacheId, pageId, page, pageAddr);
+
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        push(cacheId, pageId, WRITE_LOCK);
+        locked = false;
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
+        checkDump();
 
-        try {
-            pop(cacheId, pageId, WRITE_UNLOCK);
+        locked = true;
+        if (dump) {
+            locked = false;
+
+            onWriteUnlock(cacheId, pageId, page, pageAddr);
+
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        pop(cacheId, pageId, WRITE_UNLOCK);
+
+        locked = false;
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        lock();
+        checkDump();
 
-        try {
-            nextPage = pageId;
-            op = BEFORE_READ_LOCK;
+        locked = true;
+        if (dump) {
+            locked = false;
+
+            onBeforeReadLock(cacheId, pageId, page);
+
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        nextPage = pageId;
+        op = BEFORE_READ_LOCK;
+        locked = false;
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
+        checkDump();
 
-        try {
-            push(cacheId, pageId, READ_LOCK);
+        locked = true;
+
+        if (dump) {
+            locked = false;
+
+            onReadLock(cacheId, pageId, page, pageAddr);
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        push(cacheId, pageId, READ_LOCK);
+        locked = false;
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
+        checkDump();
 
-        try {
-            pop(cacheId, pageId, READ_UNLOCK);
+        locked = true;
+
+        if (dump) {
+            locked = false;
+
+            onReadUnlock(cacheId, pageId, page, pageAddr);
+            return;
         }
-        finally {
-            unLock();
-        }
+
+        pop(cacheId, pageId, READ_UNLOCK);
+        locked = false;
     }
 
     private void push(int cacheId, long pageId, int flags) {
@@ -142,18 +155,6 @@ public class HeapArrayLockStack implements PageLockListener {
         arrPageIds[headIdx] = pageId;
 
         headIdx++;
-    }
-
-    private void lock() {
-        while (!locked.compareAndSet(false, true)) {
-            // Busy wait.
-        }
-    }
-
-    private void unLock() {
-        boolean res = locked.compareAndSet(true, false);
-
-        assert res;
     }
 
     private void reset() {
@@ -217,22 +218,12 @@ public class HeapArrayLockStack implements PageLockListener {
     @Override public String toString() {
         SB res = new SB();
 
-        long[] stack;
-        int headIdx;
-        long nextPage;
-        int op;
+        State state = dump();
 
-        lock();
-
-        try {
-            stack = Arrays.copyOf(arrPageIds, arrPageIds.length);
-            headIdx = this.headIdx;
-            nextPage = this.nextPage;
-            op = this.op;
-        }
-        finally {
-            unLock();
-        }
+        long[] stack = state.arrPageIds;
+        int headIdx = state.headIdx;
+        long nextPage = state.nextPage;
+        int op = state.op;
 
         res.a(name).a(", locked pages stack:\n");
 
@@ -264,6 +255,46 @@ public class HeapArrayLockStack implements PageLockListener {
         res.a("\n");
 
         return res.toString();
+    }
+
+    private void checkDump() {
+        while (dump) {
+            // Busy wait.
+        }
+    }
+
+    public State dump() {
+        dump = true;
+
+        while (locked) {
+            // Busy wait.
+        }
+
+        long[] stack = copyOf(this.arrPageIds, this.arrPageIds.length);
+        State state = new State(this.name + " (time=" + System.currentTimeMillis() + ")", stack);
+        state.headIdx = headIdx;
+        state.nextPage = nextPage;
+        state.op = op;
+
+        dump = false;
+
+        return state;
+    }
+
+    public static class State {
+        private final String name;
+
+        private int headIdx;
+
+        private final long[] arrPageIds;
+
+        private long nextPage;
+        private int op;
+
+        public State(String name, long[] arrPageIds) {
+            this.name = name;
+            this.arrPageIds = arrPageIds;
+        }
     }
 
     private String pageIdToString(long pageId) {
