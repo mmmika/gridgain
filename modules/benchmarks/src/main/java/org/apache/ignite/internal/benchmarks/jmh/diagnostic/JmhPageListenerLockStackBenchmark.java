@@ -19,7 +19,7 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
     public static void main(String[] args) throws Exception {
         JmhIdeBenchmarkRunner.create()
             .forks(1)
-            .threads(8)
+            .threads(1)
             .warmupIterations(10)
             .measurementIterations(10)
             .benchmarks(JmhPageListenerLockStackBenchmark.class.getSimpleName())
@@ -35,7 +35,7 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
         @Param({"2", "4", "8", "16"})
         int stackSize;
 
-        @Param({"HeapArrayLockStack", "HeapArrayLockLog"})
+        @Param({"HeapArrayLockStack"})
         String type;
 
         int cacheId = 123;
@@ -72,6 +72,8 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
                 return new HeapArrayLockStack(name);
             case "HeapArrayLockLog":
                 return new HeapArrayLockLog(name);
+            case "OffHeapLockStack":
+                return new OffHeapLockStack();
         }
 
         return null;
