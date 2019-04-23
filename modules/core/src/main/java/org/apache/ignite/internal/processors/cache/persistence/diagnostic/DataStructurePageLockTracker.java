@@ -8,16 +8,16 @@ public class DataStructurePageLockTracker implements PageLockListener {
 
     private final String structureName;
 
-    private final Map<Long, LockInterceptor> threadStacks = new ConcurrentHashMap<>();
+    private final Map<Long, PageLockListener> threadStacks = new ConcurrentHashMap<>();
 
     /** */
-    private final ThreadLocal<LockInterceptor> lockTracker = ThreadLocal.withInitial(() -> {
+    private final ThreadLocal<PageLockListener> lockTracker = ThreadLocal.withInitial(() -> {
         Thread thread = Thread.currentThread();
 
         String threadName = thread.getName();
         long threadId = thread.getId();
 
-        LockInterceptor stack = createLockStack(threadName + "[" + threadId + "]" + " - " + name());
+        PageLockListener stack = createLockStack(threadName + "[" + threadId + "]" + " - " + name());
 
         threadStacks.put(threadId, stack);
 
@@ -37,31 +37,31 @@ public class DataStructurePageLockTracker implements PageLockListener {
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        lockTracker.get().beforeWriteLock(cacheId, pageId);
+        lockTracker.get().onBeforeWriteLock(cacheId, pageId, page);
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().writeLock(cacheId, pageId);
+        lockTracker.get().onWriteLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().writeUnLock(cacheId, pageId);
+        lockTracker.get().onWriteUnlock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        lockTracker.get().beforeReadLock(cacheId, pageId);
+        lockTracker.get().onBeforeReadLock(cacheId, pageId, page);
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().readLock(cacheId, pageId);
+        lockTracker.get().onReadLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().readUnlock(cacheId, pageId);
+        lockTracker.get().onReadUnlock(cacheId, pageId, page, pageAddr);
     }
 
-    private LockInterceptor createLockStack(String name) {
-        //return new OffHeapLockInterceptor(name, threadId);
+    private PageLockListener createLockStack(String name) {
+        //return new OffHeapLockStack(name, threadId);
         //return new HeapArrayLockLog(name, threadId);
         return new HeapArrayLockStack(name);
     }

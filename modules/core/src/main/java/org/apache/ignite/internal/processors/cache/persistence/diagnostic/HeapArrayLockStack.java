@@ -1,6 +1,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.NoSuchElementException;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
@@ -9,7 +10,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockStack implements LockInterceptor {
+public class HeapArrayLockStack implements PageLockListener {
     private int headIdx;
 
     private static final int READ_LOCK = 1;
@@ -30,30 +31,30 @@ public class HeapArrayLockStack implements LockInterceptor {
         this.name = "name=" + name;
     }
 
-    @Override public void beforeReadLock(int cacheId, long pageId) {
-        nextPage = pageId;
-        op = BEFORE_READ_LOCK;
-    }
-
-    @Override public void readLock(int cacheId, long pageId) {
-        push(cacheId, pageId, READ_LOCK);
-    }
-
-    @Override public void readUnlock(int cacheId, long pageId) {
-        pop(cacheId, pageId, READ_UNLOCK);
-    }
-
-    @Override public void beforeWriteLock(int cacheId, long pageId) {
+    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
         nextPage = pageId;
         op = BEFORE_WRITE_LOCK;
     }
 
-    @Override public void writeLock(int cacheId, long pageId) {
+    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
         push(cacheId, pageId, WRITE_LOCK);
     }
 
-    @Override public void writeUnLock(int cacheId, long pageId) {
+    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
         pop(cacheId, pageId, WRITE_UNLOCK);
+    }
+
+    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
+        nextPage = pageId;
+        op = BEFORE_READ_LOCK;
+    }
+
+    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
+        push(cacheId, pageId, READ_LOCK);
+    }
+
+    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
+        pop(cacheId, pageId, READ_UNLOCK);
     }
 
     private void push(int cacheId, long pageId, int flags) {
