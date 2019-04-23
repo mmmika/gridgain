@@ -2,7 +2,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
@@ -33,6 +33,12 @@ public class HeapArrayLockStack implements PageLockListener {
     //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   3546973.366 ±  59300.908  ops/s
     //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1759634.526 ±  19412.998  ops/s
 
+    //Benchmark                                     (stackSize)              (type)   Mode  Cnt         Score         Error  Units
+    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10  13143263.758 ± 1241703.543  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockStack  thrpt   10   6666108.001 ±   94336.397  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   3235242.435 ±  147932.557  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1680152.792 ±   12182.147  ops/s
+
     private static final int READ_LOCK = 1;
     private static final int READ_UNLOCK = 2;
     private static final int WRITE_LOCK = 3;
@@ -47,110 +53,78 @@ public class HeapArrayLockStack implements PageLockListener {
     private long nextPage;
     private int op;
 
-    private volatile boolean dump;
-
-    private volatile boolean locked;
+    private AtomicBoolean locked = new AtomicBoolean();
 
     public HeapArrayLockStack(String name) {
         this.name = "name=" + name;
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeWriteLock(cacheId, pageId, page);
-
-            return;
+        try {
+            nextPage = pageId;
+            op = BEFORE_WRITE_LOCK;
         }
-
-        nextPage = pageId;
-        op = BEFORE_WRITE_LOCK;
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteLock(cacheId, pageId, page, pageAddr);
-
-            return;
+        try {
+            push(cacheId, pageId, WRITE_LOCK);
         }
-
-        push(cacheId, pageId, WRITE_LOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteUnlock(cacheId, pageId, page, pageAddr);
-
-            return;
+        try {
+            pop(cacheId, pageId, WRITE_UNLOCK);
         }
-
-        pop(cacheId, pageId, WRITE_UNLOCK);
-
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeReadLock(cacheId, pageId, page);
-
-            return;
+        try {
+            nextPage = pageId;
+            op = BEFORE_READ_LOCK;
         }
-
-        nextPage = pageId;
-        op = BEFORE_READ_LOCK;
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onReadLock(cacheId, pageId, page, pageAddr);
-            return;
+        try {
+            push(cacheId, pageId, READ_LOCK);
         }
-
-        push(cacheId, pageId, READ_LOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-
-        if (dump) {
-            locked = false;
-
-            onReadUnlock(cacheId, pageId, page, pageAddr);
-            return;
+        try {
+            pop(cacheId, pageId, READ_UNLOCK);
         }
-
-        pop(cacheId, pageId, READ_UNLOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     private void push(int cacheId, long pageId, int flags) {
@@ -170,10 +144,16 @@ public class HeapArrayLockStack implements PageLockListener {
         headIdx++;
     }
 
-    private void checkDump(){
-        while (dump){
+    private void lock() {
+        while (!locked.compareAndSet(false, true)) {
             // Busy wait.
         }
+    }
+
+    private void unLock() {
+        boolean res = locked.compareAndSet(true, false);
+
+        assert res;
     }
 
     private void reset() {
@@ -242,18 +222,17 @@ public class HeapArrayLockStack implements PageLockListener {
         long nextPage;
         int op;
 
-        dump = true;
+        lock();
 
-        while (locked){
-            // Busy wait.
+        try {
+            stack = Arrays.copyOf(arrPageIds, arrPageIds.length);
+            headIdx = this.headIdx;
+            nextPage = this.nextPage;
+            op = this.op;
         }
-
-        stack = Arrays.copyOf(arrPageIds, arrPageIds.length);
-        headIdx = this.headIdx;
-        nextPage = this.nextPage;
-        op = this.op;
-
-        dump = false;
+        finally {
+            unLock();
+        }
 
         res.a(name).a(", locked pages stack:\n");
 
