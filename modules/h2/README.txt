@@ -1,7 +1,7 @@
-Apache Ignite H2 Module
+GridGain Ignite H2 Module
 -----------------------------
 
-Apache Ignite H2 module provides SQL engine for ignite indexing.
+GridGain Ignite H2 module provides SQL engine for ignite indexing.
 
 To enable H2 module when starting a standalone node, move 'optional/ignite-h2' folder to
 'libs' folder before running 'ignite.{sh|bat}' script. The content of the module folder will
