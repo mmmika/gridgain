@@ -135,8 +135,7 @@ public class HeapArrayLockStack implements PageLockListener {
     @Override public String toString() {
         SB res = new SB();
 
-        res.a(name).a("\n");
-        res.a("locked pages stack = {");
+        res.a(name).a(", locked pages stack:\n");
 
         if (nextPage != 0) {
             String str = "N/A";
@@ -146,21 +145,24 @@ public class HeapArrayLockStack implements PageLockListener {
             else if (op == BEFORE_WRITE_LOCK)
                 str = "obtain write lock";
 
-            res.a(">>> try " + str + ", " + pageIdToString(nextPage) + "\n");
+            res.a("\t>>> try " + str + ", " + pageIdToString(nextPage) + "\n");
         }
 
-        for (int i = headIdx; i >= 0; i--) {
+        for (int i = headIdx - 1; i >= 0; i--) {
             long pageId = arrPageIds[i];
 
+            if (pageId == 0 && i == 0)
+                break;
+
             if (pageId == 0) {
-                res.a(i + " -\n");
+                res.a("\t" + i + " -\n");
             }
             else {
-                res.a(i + " " + pageIdToString(pageId) + "\n");
+                res.a("\t" + i + " " + pageIdToString(pageId) + "\n");
             }
         }
 
-        res.a("}\n");
+        res.a("\n");
 
         return res.toString();
     }

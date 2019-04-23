@@ -2,6 +2,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
@@ -10,7 +11,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockLog implements LockInterceptor {
+public class HeapArrayLockLog implements PageLockListener {
     private int headIdx;
     private int holdedLockCnt;
 
@@ -38,32 +39,32 @@ public class HeapArrayLockLog implements LockInterceptor {
         this.name = "[name=" + name + ", thread=" + threadId + "]";
     }
 
-    @Override public void beforeReadLock(int cacheId, long pageId) {
-        this.cacheId = cacheId;
-        this.pageId = pageId;
-        this.op = BEFORE_READ_LOCK;
-    }
-
-    @Override public void readLock(int cacheId, long pageId) {
-        log(cacheId, pageId, READ_LOCK);
-    }
-
-    @Override public void readUnlock(int cacheId, long pageId) {
-        log(cacheId, pageId, READ_UNLOCK);
-    }
-
-    @Override public void beforeWriteLock(int cacheId, long pageId) {
+    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
         this.cacheId = cacheId;
         this.pageId = pageId;
         this.op = BEFORE_WRITE_LOCK;
     }
 
-    @Override public void writeLock(int cacheId, long pageId) {
+    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
         log(cacheId, pageId, WRITE_LOCK);
     }
 
-    @Override public void writeUnLock(int cacheId, long pageId) {
+    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
         log(cacheId, pageId, WRITE_UNLOCK);
+    }
+
+    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
+        this.cacheId = cacheId;
+        this.pageId = pageId;
+        this.op = BEFORE_READ_LOCK;
+    }
+
+    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, READ_LOCK);
+    }
+
+    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, READ_UNLOCK);
     }
 
     private void log(int cacheId, long pageId, int flags){
