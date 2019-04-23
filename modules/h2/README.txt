@@ -22,7 +22,7 @@ interested in):
     <dependencies>
         ...
         <dependency>
-            <groupId>org.apache.ignite</groupId>
+            <groupId>org.gridgain</groupId>
             <artifactId>ignite-h2</artifactId>
             <version>${ignite.version}</version>
         </dependency>
