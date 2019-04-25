@@ -3,7 +3,6 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 import java.util.NoSuchElementException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
@@ -13,83 +12,46 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockStack
-    extends AbstractPageLockTracker<HeapArrayLockStack.State>
+    extends AbstractPageLockTracker<HeapArrayLockStack.LocksStateSnapshot>
     implements PageLockListener {
     private static final int STACK_SIZE = 128;
 
+    protected int headIdx;
+
     private final long[] arrPageIds;
 
-    private long nextPage;
-    private int op;
+    private long nextOpPageId;
+    private int nextOp;
 
     public HeapArrayLockStack(String name) {
         super("name=" + name);
         this.arrPageIds = new long[STACK_SIZE];
     }
 
-    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        lock();
-
-        nextPage = pageId;
-        op = BEFORE_WRITE_LOCK;
-
-        unLock();
+    @Override public void onBeforeWriteLock0(int cacheId, long pageId, long page) {
+        nextOpPageId = pageId;
+        nextOp = BEFORE_WRITE_LOCK;
     }
 
-    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            push(cacheId, pageId, WRITE_LOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onWriteLock0(int cacheId, long pageId, long page, long pageAddr) {
+        push(cacheId, pageId, WRITE_LOCK);
     }
 
-    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            pop(cacheId, pageId, WRITE_UNLOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr) {
+        pop(cacheId, pageId, WRITE_UNLOCK);
     }
 
-    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        lock();
-
-        try {
-            nextPage = pageId;
-            op = BEFORE_READ_LOCK;
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onBeforeReadLock0(int cacheId, long pageId, long page) {
+        nextOpPageId = pageId;
+        nextOp = BEFORE_READ_LOCK;
     }
 
-    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            push(cacheId, pageId, READ_LOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onReadLock0(int cacheId, long pageId, long page, long pageAddr) {
+        push(cacheId, pageId, READ_LOCK);
     }
 
-    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            pop(cacheId, pageId, READ_UNLOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr) {
+        pop(cacheId, pageId, READ_UNLOCK);
     }
 
     private void push(int cacheId, long pageId, int flags) {
@@ -110,8 +72,8 @@ public class HeapArrayLockStack
     }
 
     private void reset() {
-        nextPage = 0;
-        op = 0;
+        nextOpPageId = 0;
+        nextOp = 0;
     }
 
     private void pop(int cacheId, long pageId, int flags) {
@@ -168,23 +130,24 @@ public class HeapArrayLockStack
 
 
     /** {@inheritDoc} */
-    @Override public State dump() {
+    @Override public LocksStateSnapshot dump() {
         prepareDump();
 
         awaitLocks();
 
         long[] stack = copyOf(this.arrPageIds, this.arrPageIds.length);
-        State state = new State(this.name + " (time=" + System.currentTimeMillis() + ")", stack);
-        state.headIdx = headIdx;
-        state.nextPage = nextPage;
-        state.op = op;
+        LocksStateSnapshot locksStateSnapshot = new LocksStateSnapshot(
+            this.name + " (time=" + System.currentTimeMillis() + ")", stack);
+        locksStateSnapshot.headIdx = headIdx;
+        locksStateSnapshot.nextPage = nextOpPageId;
+        locksStateSnapshot.op = nextOp;
 
         onDumpComplete();
 
-        return state;
+        return locksStateSnapshot;
     }
 
-    public static class State implements Dump {
+    public static class LocksStateSnapshot implements Dump {
         private final String name;
 
         private int headIdx;
@@ -194,7 +157,7 @@ public class HeapArrayLockStack
         private long nextPage;
         private int op;
 
-        public State(String name, long[] stack) {
+        public LocksStateSnapshot(String name, long[] stack) {
             this.name = name;
             this.stack = stack;
         }

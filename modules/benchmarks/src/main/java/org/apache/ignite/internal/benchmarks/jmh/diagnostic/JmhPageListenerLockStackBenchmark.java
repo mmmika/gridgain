@@ -50,6 +50,16 @@ public class JmhPageListenerLockStackBenchmark extends JmhAbstractBenchmark {
     //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockStack  thrpt   10   2399365.642 ±   68528.195  ops/s
     //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockStack  thrpt   10   1165728.828 ±  120575.800  ops/s
 
+    //Benchmark                                     (stackSize)            (type)   Mode  Cnt         Score        Error  Units
+    //JmhPageListenerLockStackBenchmark.lockUnlock            2  OffHeapLockStack  thrpt   10  13952320.310 ± 276402.554  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            2  HeapArrayLockLog  thrpt   10  10874090.608 ± 188293.713  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            4  OffHeapLockStack  thrpt   10   7093345.663 ± 101074.289  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            4  HeapArrayLockLog  thrpt   10   5538727.301 ±  56734.259  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            8  OffHeapLockStack  thrpt   10   3512040.073 ±  52490.188  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock            8  HeapArrayLockLog  thrpt   10   2776114.210 ±  64397.614  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock           16  OffHeapLockStack  thrpt   10   1663395.881 ± 114338.723  ops/s
+    //JmhPageListenerLockStackBenchmark.lockUnlock           16  HeapArrayLockLog  thrpt   10   1356006.030 ±  14013.288  ops/s
+
     public static void main(String[] args) throws Exception {
         JmhIdeBenchmarkRunner.create()
             .forks(1)

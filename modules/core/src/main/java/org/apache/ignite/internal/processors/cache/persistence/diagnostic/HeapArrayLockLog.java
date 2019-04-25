@@ -15,91 +15,50 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 public class HeapArrayLockLog
     extends AbstractPageLockTracker<HeapArrayLockLog.LocksState>
     implements PageLockListener {
-    private int holdedLockCnt;
-
     private static final int OP_OFFSET = 16;
     private static final int LOCK_IDX_MASK = 0xFFFF0000;
     private static final int LOCK_OP_MASK = 0x000000000000FF;
+
+    protected int headIdx;
+
+    private final long[] pageIdsLockLog = new long[1024 * 2];
+
+    private int holdedLockCnt;
 
     private int nextOpCacheId;
     private long nextOpPageId;
     private int nextOp;
 
-    private final long[] pageIdsLockLog = new long[1024 * 2];
-
     public HeapArrayLockLog(String name) {
         super("name=" + name);
     }
 
-    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        lock();
-
-        try {
-            this.nextOpCacheId = cacheId;
-            this.nextOpPageId = pageId;
-            this.nextOp = BEFORE_WRITE_LOCK;
-        }
-        finally {
-            unLock();
-        }
+    @Override protected void onBeforeWriteLock0(int cacheId, long pageId, long page) {
+        this.nextOpCacheId = cacheId;
+        this.nextOpPageId = pageId;
+        this.nextOp = BEFORE_WRITE_LOCK;
     }
 
-    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            log(cacheId, pageId, WRITE_LOCK);
-
-        }
-        finally {
-            unLock();
-        }
+    @Override protected void onWriteLock0(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, WRITE_LOCK);
     }
 
-    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            log(cacheId, pageId, WRITE_UNLOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override protected void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, WRITE_UNLOCK);
     }
 
-    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        lock();
-
-        try {
-            this.nextOpCacheId = cacheId;
-            this.nextOpPageId = pageId;
-            this.nextOp = BEFORE_READ_LOCK;
-        }
-        finally {
-            unLock();
-        }
+    @Override protected void onBeforeReadLock0(int cacheId, long pageId, long page) {
+        this.nextOpCacheId = cacheId;
+        this.nextOpPageId = pageId;
+        this.nextOp = BEFORE_READ_LOCK;
     }
 
-    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            log(cacheId, pageId, READ_LOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override protected void onReadLock0(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, READ_LOCK);
     }
 
-    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lock();
-
-        try {
-            log(cacheId, pageId, READ_UNLOCK);
-        }
-        finally {
-            unLock();
-        }
+    @Override public void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr) {
+        log(cacheId, pageId, READ_UNLOCK);
     }
 
     private void log(int cacheId, long pageId, int flags) {
@@ -159,7 +118,7 @@ public class HeapArrayLockLog
         return major | minor;
     }
 
-    @Override public Dump dump() {
+    @Override public LocksState dump() {
         prepareDump();
 
         awaitLocks();
