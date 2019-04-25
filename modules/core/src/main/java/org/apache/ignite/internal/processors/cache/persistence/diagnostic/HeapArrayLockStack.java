@@ -1,10 +1,9 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
-import java.util.Arrays;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
@@ -13,131 +12,84 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockStack implements PageLockListener {
-    private static final int READ_LOCK = 1;
-    private static final int READ_UNLOCK = 2;
-    private static final int WRITE_LOCK = 3;
-    private static final int WRITE_UNLOCK = 4;
-    private static final int BEFORE_READ_LOCK = 5;
-    private static final int BEFORE_WRITE_LOCK = 6;
-
+public class HeapArrayLockStack
+    extends AbstractPageLockTracker<HeapArrayLockStack.State>
+    implements PageLockListener {
     private static final int STACK_SIZE = 128;
-
-    private final String name;
-
-    private int headIdx;
 
     private final long[] arrPageIds;
 
     private long nextPage;
     private int op;
 
-    private volatile boolean dump;
-
-    private volatile boolean locked;
-
     public HeapArrayLockStack(String name) {
-        this.name = "name=" + name;
+        super("name=" + name);
         this.arrPageIds = new long[STACK_SIZE];
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        checkDump();
-
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeWriteLock(cacheId, pageId, page);
-
-            return;
-        }
+        lock();
 
         nextPage = pageId;
         op = BEFORE_WRITE_LOCK;
-        locked = false;
+
+        unLock();
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteLock(cacheId, pageId, page, pageAddr);
-
-            return;
+        try {
+            push(cacheId, pageId, WRITE_LOCK);
         }
-
-        push(cacheId, pageId, WRITE_LOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteUnlock(cacheId, pageId, page, pageAddr);
-
-            return;
+        try {
+            pop(cacheId, pageId, WRITE_UNLOCK);
         }
-
-        pop(cacheId, pageId, WRITE_UNLOCK);
-
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        checkDump();
+        lock();
 
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeReadLock(cacheId, pageId, page);
-
-            return;
+        try {
+            nextPage = pageId;
+            op = BEFORE_READ_LOCK;
         }
-
-        nextPage = pageId;
-        op = BEFORE_READ_LOCK;
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-
-        if (dump) {
-            locked = false;
-
-            onReadLock(cacheId, pageId, page, pageAddr);
-            return;
+        try {
+            push(cacheId, pageId, READ_LOCK);
         }
-
-        push(cacheId, pageId, READ_LOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
+        lock();
 
-        locked = true;
-
-        if (dump) {
-            locked = false;
-
-            onReadUnlock(cacheId, pageId, page, pageAddr);
-            return;
+        try {
+            pop(cacheId, pageId, READ_UNLOCK);
         }
-
-        pop(cacheId, pageId, READ_UNLOCK);
-        locked = false;
+        finally {
+            unLock();
+        }
     }
 
     private void push(int cacheId, long pageId, int flags) {
@@ -214,61 +166,12 @@ public class HeapArrayLockStack implements PageLockListener {
         }
     }
 
+
     /** {@inheritDoc} */
-    @Override public String toString() {
-        SB res = new SB();
+    @Override public State dump() {
+        prepareDump();
 
-        State state = dump();
-
-        long[] stack = state.arrPageIds;
-        int headIdx = state.headIdx;
-        long nextPage = state.nextPage;
-        int op = state.op;
-
-        res.a(name).a(", locked pages stack:\n");
-
-        if (nextPage != 0) {
-            String str = "N/A";
-
-            if (op == BEFORE_READ_LOCK)
-                str = "obtain read lock";
-            else if (op == BEFORE_WRITE_LOCK)
-                str = "obtain write lock";
-
-            res.a("\t>>> try " + str + ", " + pageIdToString(nextPage) + "\n");
-        }
-
-        for (int i = headIdx - 1; i >= 0; i--) {
-            long pageId = stack[i];
-
-            if (pageId == 0 && i == 0)
-                break;
-
-            if (pageId == 0) {
-                res.a("\t" + i + " -\n");
-            }
-            else {
-                res.a("\t" + i + " " + pageIdToString(pageId) + "\n");
-            }
-        }
-
-        res.a("\n");
-
-        return res.toString();
-    }
-
-    private void checkDump() {
-        while (dump) {
-            // Busy wait.
-        }
-    }
-
-    public State dump() {
-        dump = true;
-
-        while (locked) {
-            // Busy wait.
-        }
+        awaitLocks();
 
         long[] stack = copyOf(this.arrPageIds, this.arrPageIds.length);
         State state = new State(this.name + " (time=" + System.currentTimeMillis() + ")", stack);
@@ -276,31 +179,66 @@ public class HeapArrayLockStack implements PageLockListener {
         state.nextPage = nextPage;
         state.op = op;
 
-        dump = false;
+        onDumpComplete();
 
         return state;
     }
 
-    public static class State {
+    public static class State implements Dump {
         private final String name;
 
         private int headIdx;
 
-        private final long[] arrPageIds;
+        private final long[] stack;
 
         private long nextPage;
         private int op;
 
-        public State(String name, long[] arrPageIds) {
+        public State(String name, long[] stack) {
             this.name = name;
-            this.arrPageIds = arrPageIds;
+            this.stack = stack;
         }
-    }
 
-    private String pageIdToString(long pageId) {
-        return "pageId=" + pageId
-            + " [pageIdxHex=" + hexLong(pageId)
-            + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-            + ", flags=" + hexInt(flag(pageId)) + "]";
+        @Override public String toString() {
+            SB res = new SB();
+
+            res.a(name).a(", locked pages stack:\n");
+
+            if (nextPage != 0) {
+                String str = "N/A";
+
+                if (op == BEFORE_READ_LOCK)
+                    str = "obtain read lock";
+                else if (op == BEFORE_WRITE_LOCK)
+                    str = "obtain write lock";
+
+                res.a("\t>>> try " + str + ", " + pageIdToString(nextPage) + "\n");
+            }
+
+            for (int i = headIdx - 1; i >= 0; i--) {
+                long pageId = stack[i];
+
+                if (pageId == 0 && i == 0)
+                    break;
+
+                if (pageId == 0) {
+                    res.a("\t" + i + " -\n");
+                }
+                else {
+                    res.a("\t" + i + " " + pageIdToString(pageId) + "\n");
+                }
+            }
+
+            res.a("\n");
+
+            return res.toString();
+        }
+
+        private String pageIdToString(long pageId) {
+            return "pageId=" + pageId
+                + " [pageIdxHex=" + hexLong(pageId)
+                + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
+                + ", flags=" + hexInt(flag(pageId)) + "]";
+        }
     }
 }

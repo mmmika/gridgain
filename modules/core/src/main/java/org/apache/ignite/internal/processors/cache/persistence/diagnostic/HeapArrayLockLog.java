@@ -5,82 +5,117 @@ import java.util.Map;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
+import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockLog implements PageLockListener {
-    private int headIdx;
+public class HeapArrayLockLog
+    extends AbstractPageLockTracker<HeapArrayLockLog.LocksState>
+    implements PageLockListener {
     private int holdedLockCnt;
 
     private static final int OP_OFFSET = 16;
     private static final int LOCK_IDX_MASK = 0xFFFF0000;
     private static final int LOCK_OP_MASK = 0x000000000000FF;
 
-    private static final int READ_LOCK = 1;
-    private static final int READ_UNLOCK = 2;
-    private static final int WRITE_LOCK = 3;
-    private static final int WRITE_UNLOCK = 4;
-    private static final int BEFORE_READ_LOCK = 5;
-    private static final int BEFORE_WRITE_LOCK = 6;
+    private int nextOpCacheId;
+    private long nextOpPageId;
+    private int nextOp;
 
-    private int cacheId;
-    private long pageId;
-    private int op;
-
-    private final long[] arrPageIds = new long[1024 * 2];
-
-    private final String name;
-
+    private final long[] pageIdsLockLog = new long[1024 * 2];
 
     public HeapArrayLockLog(String name) {
-        this.name = "name=" + name;
+        super("name=" + name);
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        this.cacheId = cacheId;
-        this.pageId = pageId;
-        this.op = BEFORE_WRITE_LOCK;
+        lock();
+
+        try {
+            this.nextOpCacheId = cacheId;
+            this.nextOpPageId = pageId;
+            this.nextOp = BEFORE_WRITE_LOCK;
+        }
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, WRITE_LOCK);
+        lock();
+
+        try {
+            log(cacheId, pageId, WRITE_LOCK);
+
+        }
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, WRITE_UNLOCK);
+        lock();
+
+        try {
+            log(cacheId, pageId, WRITE_UNLOCK);
+        }
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        this.cacheId = cacheId;
-        this.pageId = pageId;
-        this.op = BEFORE_READ_LOCK;
+        lock();
+
+        try {
+            this.nextOpCacheId = cacheId;
+            this.nextOpPageId = pageId;
+            this.nextOp = BEFORE_READ_LOCK;
+        }
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, READ_LOCK);
+        lock();
+
+        try {
+            log(cacheId, pageId, READ_LOCK);
+        }
+        finally {
+            unLock();
+        }
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, READ_UNLOCK);
+        lock();
+
+        try {
+            log(cacheId, pageId, READ_UNLOCK);
+        }
+        finally {
+            unLock();
+        }
     }
 
-    private void log(int cacheId, long pageId, int flags){
+    private void log(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if (headIdx + 2 > arrPageIds.length)
-            throw new StackOverflowError("Stack overflow, size:" + arrPageIds.length +
-                "\n cacheId=" + cacheId + ", pageId=" + pageId + ", flags=" + flags +
+        if (headIdx + 2 > pageIdsLockLog.length)
+            throw new StackOverflowError("Stack overflow, size:" + pageIdsLockLog.length +
+                "\n nextOpCacheId=" + cacheId + ", nextOpPageId=" + pageId + ", flags=" + flags +
                 "\n" + toString());
 
-        long pageId0 = arrPageIds[headIdx];
+        long pageId0 = pageIdsLockLog[headIdx];
 
         assert pageId0 == 0L || pageId0 == pageId :
-            "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
+            "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", nextOpPageId=" + pageId;
 
-        arrPageIds[headIdx] = pageId;
+        pageIdsLockLog[headIdx] = pageId;
 
         if (READ_LOCK == flags || WRITE_LOCK == flags)
             holdedLockCnt++;
@@ -92,7 +127,7 @@ public class HeapArrayLockLog implements PageLockListener {
 
         long meta = meta(cacheId, curIdx | flags);
 
-        arrPageIds[headIdx + 1] = meta;
+        pageIdsLockLog[headIdx + 1] = meta;
 
         if (BEFORE_READ_LOCK == flags || BEFORE_WRITE_LOCK == flags)
             return;
@@ -102,140 +137,18 @@ public class HeapArrayLockLog implements PageLockListener {
         if (holdedLockCnt == 0)
             reset();
 
-        if (this.pageId == pageId && this.cacheId == cacheId) {
-            this.cacheId = 0;
-            this.pageId = 0;
-            this.op = 0;
+        if (this.nextOpPageId == pageId && this.nextOpCacheId == cacheId) {
+            this.nextOpCacheId = 0;
+            this.nextOpPageId = 0;
+            this.nextOp = 0;
         }
     }
 
     private void reset() {
         for (int i = 0; i < headIdx; i++)
-            arrPageIds[i] = 0;
+            pageIdsLockLog[i] = 0;
 
         headIdx = 0;
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        SB res = new SB();
-
-        res.a(name).a("\n");
-
-        Map<Long, LockState> holdetLocks = new LinkedHashMap<>();
-
-        SB logLocksStr = new SB();
-
-        for (int i = 0; i < headIdx; i += 2) {
-            long metaOnLock = arrPageIds[i + 1];
-
-            assert metaOnLock != 0;
-
-            int idx = ((int)(metaOnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
-
-            assert idx >= 0;
-
-            long pageId = arrPageIds[i];
-
-            int op = (int)((metaOnLock >> 32) & LOCK_OP_MASK);
-            int cacheId = (int)(metaOnLock);
-
-            String opStr = "N/A";
-
-            switch (op) {
-                case READ_LOCK:
-                    opStr = "Read lock    ";
-                    break;
-                case READ_UNLOCK:
-                    opStr = "Read unlock  ";
-                    break;
-                case WRITE_LOCK:
-                    opStr = "Write lock    ";
-                    break;
-                case WRITE_UNLOCK:
-                    opStr = "Write unlock  ";
-                    break;
-            }
-
-            if (op == READ_LOCK || op == WRITE_LOCK || op == BEFORE_READ_LOCK) {
-                LockState state = holdetLocks.get(pageId);
-
-                if (state == null)
-                    holdetLocks.put(pageId, state = new LockState());
-
-                if (op == READ_LOCK)
-                    state.readlock++;
-
-                if (op == WRITE_LOCK)
-                    state.writelock++;
-
-                logLocksStr.a("L=" + idx + " -> " + opStr + " pageId=" + pageId + ", cacheId=" + cacheId
-                    + " [pageIdxHex=" + hexLong(pageId)
-                    + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-                    + ", flags=" + hexInt(flag(pageId)) + "]\n");
-            }
-
-            if (op == READ_UNLOCK || op == WRITE_UNLOCK) {
-                LockState state = holdetLocks.get(pageId);
-
-                if (op == READ_UNLOCK)
-                    state.readlock--;
-
-                if (op == WRITE_UNLOCK)
-                    state.writelock--;
-
-                if (state.readlock == 0 && state.writelock == 0)
-                    holdetLocks.remove(pageId);
-
-                logLocksStr.a("L=" + idx + " <- " + opStr + " pageId=" + pageId + ", cacheId=" + cacheId
-                    + " [pageIdxHex=" + hexLong(pageId)
-                    + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-                    + ", flags=" + hexInt(flag(pageId)) + "]\n");
-            }
-        }
-
-        if (pageId != 0) {
-            String opStr = "N/A";
-
-            switch (op) {
-                case BEFORE_READ_LOCK:
-                    opStr = "Try read lock    ";
-                    break;
-                case BEFORE_WRITE_LOCK:
-                    opStr = "Try write lock  ";
-                    break;
-            }
-
-            logLocksStr.a("-> " + opStr + " pageId=" + pageId + ", cacheId=" + cacheId
-                + " [pageIdxHex=" + hexLong(pageId)
-                + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-                + ", flags=" + hexInt(flag(pageId)) + "]\n");
-        }
-
-        SB holdetLocksStr = new SB();
-
-        holdetLocksStr.a("locked pages = [");
-
-        boolean first = true;
-
-        for (Map.Entry<Long, LockState> entry : holdetLocks.entrySet()) {
-            Long pageId = entry.getKey();
-            LockState lockState = entry.getValue();
-
-            if (!first)
-                holdetLocksStr.a(",");
-            else
-                first = false;
-
-            holdetLocksStr.a(pageId).a("(r=" + lockState.readlock + "|w=" + lockState.writelock + ")");
-        }
-
-        holdetLocksStr.a("]\n");
-
-        res.a(holdetLocksStr);
-        res.a(logLocksStr);
-
-        return res.toString();
     }
 
     private long meta(int cacheId, int flags) {
@@ -246,8 +159,164 @@ public class HeapArrayLockLog implements PageLockListener {
         return major | minor;
     }
 
+    @Override public Dump dump() {
+        prepareDump();
+
+        awaitLocks();
+
+        long[] pageIdsLockLog = copyOf(this.pageIdsLockLog, this.pageIdsLockLog.length);
+
+        LocksState locksState = new LocksState(this.name + " (time=" + System.currentTimeMillis() + ")", pageIdsLockLog);
+        locksState.headIdx = headIdx;
+        locksState.nextOp = nextOp;
+        locksState.nextOpCacheId = nextOpCacheId;
+        locksState.nextOpPageId = nextOpPageId;
+
+        onDumpComplete();
+
+        return locksState;
+    }
+
     private static class LockState {
         int readlock;
         int writelock;
+    }
+
+    public static class LocksState implements Dump {
+        private final String name;
+
+        private int headIdx;
+
+        private final long[] pageIdsLockLog;
+
+        private int nextOpCacheId;
+        private long nextOpPageId;
+        private int nextOp;
+
+        public LocksState(String name, long[] pageIdsLockLog) {
+            this.name = name;
+            this.pageIdsLockLog = pageIdsLockLog;
+        }
+
+        @Override public String toString() {
+            SB res = new SB();
+
+            res.a(name).a("\n");
+
+            Map<Long, LockState> holdetLocks = new LinkedHashMap<>();
+
+            SB logLocksStr = new SB();
+
+            for (int i = 0; i < headIdx; i += 2) {
+                long metaOnLock = pageIdsLockLog[i + 1];
+
+                assert metaOnLock != 0;
+
+                int idx = ((int)(metaOnLock >> 32) & LOCK_IDX_MASK) >> OP_OFFSET;
+
+                assert idx >= 0;
+
+                long pageId = pageIdsLockLog[i];
+
+                int op = (int)((metaOnLock >> 32) & LOCK_OP_MASK);
+                int cacheId = (int)(metaOnLock);
+
+                String opStr = "N/A";
+
+                switch (op) {
+                    case READ_LOCK:
+                        opStr = "Read lock    ";
+                        break;
+                    case READ_UNLOCK:
+                        opStr = "Read unlock  ";
+                        break;
+                    case WRITE_LOCK:
+                        opStr = "Write lock    ";
+                        break;
+                    case WRITE_UNLOCK:
+                        opStr = "Write unlock  ";
+                        break;
+                }
+
+                if (op == READ_LOCK || op == WRITE_LOCK || op == BEFORE_READ_LOCK) {
+                    LockState state = holdetLocks.get(pageId);
+
+                    if (state == null)
+                        holdetLocks.put(pageId, state = new LockState());
+
+                    if (op == READ_LOCK)
+                        state.readlock++;
+
+                    if (op == WRITE_LOCK)
+                        state.writelock++;
+
+                    logLocksStr.a("L=" + idx + " -> " + opStr + " nextOpPageId=" + pageId + ", nextOpCacheId=" + cacheId
+                        + " [pageIdxHex=" + hexLong(pageId)
+                        + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
+                        + ", flags=" + hexInt(flag(pageId)) + "]\n");
+                }
+
+                if (op == READ_UNLOCK || op == WRITE_UNLOCK) {
+                    LockState state = holdetLocks.get(pageId);
+
+                    if (op == READ_UNLOCK)
+                        state.readlock--;
+
+                    if (op == WRITE_UNLOCK)
+                        state.writelock--;
+
+                    if (state.readlock == 0 && state.writelock == 0)
+                        holdetLocks.remove(pageId);
+
+                    logLocksStr.a("L=" + idx + " <- " + opStr + " nextOpPageId=" + pageId + ", nextOpCacheId=" + cacheId
+                        + " [pageIdxHex=" + hexLong(pageId)
+                        + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
+                        + ", flags=" + hexInt(flag(pageId)) + "]\n");
+                }
+            }
+
+            if (nextOpPageId != 0) {
+                String opStr = "N/A";
+
+                switch (nextOp) {
+                    case BEFORE_READ_LOCK:
+                        opStr = "Try read lock    ";
+                        break;
+                    case BEFORE_WRITE_LOCK:
+                        opStr = "Try write lock  ";
+                        break;
+                }
+
+                logLocksStr.a("-> " + opStr + " nextOpPageId=" + nextOpPageId + ", nextOpCacheId=" + nextOpCacheId
+                    + " [pageIdxHex=" + hexLong(nextOpPageId)
+                    + ", partId=" + pageId(nextOpPageId) + ", pageIdx=" + pageIndex(nextOpPageId)
+                    + ", flags=" + hexInt(flag(nextOpPageId)) + "]\n");
+            }
+
+            SB holdetLocksStr = new SB();
+
+            holdetLocksStr.a("locked pages = [");
+
+            boolean first = true;
+
+            for (Map.Entry<Long, LockState> entry : holdetLocks.entrySet()) {
+                Long pageId = entry.getKey();
+                LockState lockState = entry.getValue();
+
+                if (!first)
+                    holdetLocksStr.a(",");
+                else
+                    first = false;
+
+                holdetLocksStr.a(pageId).a("(r=" + lockState.readlock + "|w=" + lockState.writelock + ")");
+            }
+
+            holdetLocksStr.a("]\n");
+
+            res.a(holdetLocksStr);
+            res.a(logLocksStr);
+
+            return res.toString();
+        }
     }
 }
