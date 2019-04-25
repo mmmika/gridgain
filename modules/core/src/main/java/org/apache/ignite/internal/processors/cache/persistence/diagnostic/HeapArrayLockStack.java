@@ -18,14 +18,14 @@ public class HeapArrayLockStack
 
     protected int headIdx;
 
-    private final long[] arrPageIds;
+    private final long[] pageIdLocksStack;
 
     private long nextOpPageId;
     private int nextOp;
 
     public HeapArrayLockStack(String name) {
         super("name=" + name);
-        this.arrPageIds = new long[STACK_SIZE];
+        this.pageIdLocksStack = new long[STACK_SIZE];
     }
 
     @Override public void onBeforeWriteLock0(int cacheId, long pageId, long page) {
@@ -59,14 +59,14 @@ public class HeapArrayLockStack
 
         assert pageId > 0;
 
-        if (headIdx + 1 > arrPageIds.length)
-            throw new StackOverflowError("Stack overflow, size:" + arrPageIds.length);
+        if (headIdx + 1 > pageIdLocksStack.length)
+            throw new StackOverflowError("Stack overflow, size:" + pageIdLocksStack.length);
 
-        long pageId0 = arrPageIds[headIdx];
+        long pageId0 = pageIdLocksStack[headIdx];
 
         assert pageId0 == 0L : "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
 
-        arrPageIds[headIdx] = pageId;
+        pageIdLocksStack[headIdx] = pageId;
 
         headIdx++;
     }
@@ -84,21 +84,21 @@ public class HeapArrayLockStack
         if (headIdx > 1) {
             int last = headIdx - 1;
 
-            long val = arrPageIds[last];
+            long val = pageIdLocksStack[last];
 
             if (val == pageId) {
-                arrPageIds[last] = 0;
+                pageIdLocksStack[last] = 0;
 
                 //Reset head to the first not empty element.
                 do {
                     headIdx--;
                 }
-                while (headIdx - 1 >= 0 && arrPageIds[headIdx - 1] == 0);
+                while (headIdx - 1 >= 0 && pageIdLocksStack[headIdx - 1] == 0);
             }
             else {
                 for (int i = last - 1; i >= 0; i--) {
-                    if (arrPageIds[i] == pageId) {
-                        arrPageIds[i] = 0;
+                    if (pageIdLocksStack[i] == pageId) {
+                        pageIdLocksStack[i] = 0;
 
                         return;
                     }
@@ -109,7 +109,7 @@ public class HeapArrayLockStack
             }
         }
         else {
-            long val = arrPageIds[0];
+            long val = pageIdLocksStack[0];
 
             if (val == 0)
                 throw new NoSuchElementException(
@@ -118,7 +118,7 @@ public class HeapArrayLockStack
 
             if (val == pageId) {
                 for (int i = 0; i < headIdx; i++)
-                    arrPageIds[i] = 0;
+                    pageIdLocksStack[i] = 0;
 
                 headIdx = 0;
             }
@@ -135,12 +135,15 @@ public class HeapArrayLockStack
 
         awaitLocks();
 
-        long[] stack = copyOf(this.arrPageIds, this.arrPageIds.length);
+        long[] stack = copyOf(this.pageIdLocksStack, this.pageIdLocksStack.length);
+
         LocksStateSnapshot locksStateSnapshot = new LocksStateSnapshot(
-            this.name + " (time=" + System.currentTimeMillis() + ")", stack);
-        locksStateSnapshot.headIdx = headIdx;
-        locksStateSnapshot.nextPage = nextOpPageId;
-        locksStateSnapshot.op = nextOp;
+            this.name + " (time=" + System.currentTimeMillis() + ")",
+            headIdx,
+            stack,
+            nextOpPageId,
+            nextOp
+        );
 
         onDumpComplete();
 
@@ -148,18 +151,27 @@ public class HeapArrayLockStack
     }
 
     public static class LocksStateSnapshot implements Dump {
-        private final String name;
+        public final String name;
 
-        private int headIdx;
+        public final int headIdx;
 
-        private final long[] stack;
+        public final long[] pageIdLocksStack;
 
-        private long nextPage;
-        private int op;
+        public final long nextOpPageId;
+        public final int nextOp;
 
-        public LocksStateSnapshot(String name, long[] stack) {
+        public LocksStateSnapshot(
+            String name,
+            int headIdx,
+            long[] pageIdLocksStack,
+            long panextOpPageIde,
+            int nextOp
+        ) {
             this.name = name;
-            this.stack = stack;
+            this.headIdx = headIdx;
+            this.pageIdLocksStack = pageIdLocksStack;
+            nextOpPageId = panextOpPageIde;
+            this.nextOp = nextOp;
         }
 
         @Override public String toString() {
@@ -167,19 +179,19 @@ public class HeapArrayLockStack
 
             res.a(name).a(", locked pages stack:\n");
 
-            if (nextPage != 0) {
+            if (nextOpPageId != 0) {
                 String str = "N/A";
 
-                if (op == BEFORE_READ_LOCK)
+                if (nextOp == BEFORE_READ_LOCK)
                     str = "obtain read lock";
-                else if (op == BEFORE_WRITE_LOCK)
+                else if (nextOp == BEFORE_WRITE_LOCK)
                     str = "obtain write lock";
 
-                res.a("\t>>> try " + str + ", " + pageIdToString(nextPage) + "\n");
+                res.a("\t-> try " + str + ", " + pageIdToString(nextOpPageId) + "\n");
             }
 
             for (int i = headIdx - 1; i >= 0; i--) {
-                long pageId = stack[i];
+                long pageId = pageIdLocksStack[i];
 
                 if (pageId == 0 && i == 0)
                     break;
