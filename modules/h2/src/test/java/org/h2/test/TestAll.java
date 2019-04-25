@@ -900,7 +900,7 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
         }
 
         addTest(new TestMVTableEngine());
-        addTest(new TestAutoReconnect());
+//        addTest(new TestAutoReconnect());
         addTest(new TestBnf());
         addTest(new TestCache());
         addTest(new TestCollation());
@@ -928,9 +928,9 @@ kill -9 `jps -l | grep "org.h2.test." | cut -d " " -f 1`
 
         addTest(new TestCluster());
         addTest(new TestFileLockSerialized());
-        addTest(new TestFileLockProcess());
+//        addTest(new TestFileLockProcess());
         addTest(new TestDefrag());
-        addTest(new TestTools());
+//        addTest(new TestTools());
         addTest(new TestSampleApps());
         addTest(new TestSubqueryPerformanceOnLazyExecutionMode());
 

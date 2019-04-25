@@ -44,6 +44,10 @@ public class TestNetUtils extends TestBase {
         TestBase.createCaller().init().test();
     }
 
+    @Override public boolean isEnabled() {
+        return false;
+    }
+
     @Override
     public void test() throws Exception {
         testAnonymousTlsSession();

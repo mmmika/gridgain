@@ -118,7 +118,7 @@ public class TestSampleApps extends TestDb {
 
     private void testApp(String expected, Class<?> clazz, String... args)
             throws Exception {
-        DeleteDbFiles.execute("data", "test", true);
+        DeleteDbFiles.execute("target/data", "test", true);
         Method m = clazz.getMethod("main", String[].class);
         PrintStream oldOut = System.out, oldErr = System.err;
         ByteArrayOutputStream buff = new ByteArrayOutputStream();

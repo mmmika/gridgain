@@ -50,7 +50,7 @@ public class TestConnectionInfo extends TestDb {
             getConnection("jdbc:h2:data/" + getTestName());
 
         getConnection("jdbc:h2:./data/" + getTestName()).close();
-        DeleteDbFiles.execute("data", getTestName(), true);
+        DeleteDbFiles.execute("target/data", getTestName(), true);
     }
 
     private void testConnectInitError() throws Exception {

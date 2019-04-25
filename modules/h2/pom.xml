@@ -208,8 +208,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <systemPropertyVariables>
-                        <user.language>en</user.language>
-                        <user.region>US</user.region>
                         <h2.maxMemoryRows>100</h2.maxMemoryRows>
                         <h2.delayWrongPasswordMin>0</h2.delayWrongPasswordMin>
                         <h2.delayWrongPasswordMax>0</h2.delayWrongPasswordMax>
@@ -222,9 +220,6 @@
                         <additionalClasspathElement>${project.build.outputDirectory}</additionalClasspathElement>
                         <additionalClasspathElement>${project.build.testOutputDirectory}</additionalClasspathElement>
                     </additionalClasspathElements>
-                    <includes>
-                        <include>H2AllTestsSuite.java</include>
-                    </includes>
                     <excludes>
                         <exclude>TestAllJunit.java</exclude>
                         <exclude>H2TestCase.java</exclude>

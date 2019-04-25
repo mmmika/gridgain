@@ -29,7 +29,7 @@ public class TestDropTableLarge {
     }
 
     private static void test() throws SQLException {
-        DeleteDbFiles.execute("data", "test", true);
+        DeleteDbFiles.execute("target/data", "test", true);
         Connection conn = DriverManager.getConnection("jdbc:h2:data/test");
         Statement stat = conn.createStatement();
         stat.execute("create table test1(id identity, name varchar)");

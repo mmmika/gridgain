@@ -125,14 +125,14 @@ public class TestCrashAPI extends TestDb implements Runnable {
             if (!f.getName().startsWith("db-")) {
                 continue;
             }
-            DeleteDbFiles.execute("data", null, true);
+            DeleteDbFiles.execute("target/data", null, true);
             try {
                 Restore.execute(f.getAbsolutePath(), "data", null);
             } catch (Exception e) {
                 System.out.println(f.getName() + " restore error " + e);
                 // ignore
             }
-            ArrayList<String> dbFiles = FileLister.getDatabaseFiles("data", null, false);
+            ArrayList<String> dbFiles = FileLister.getDatabaseFiles("target/data", null, false);
             for (String name: dbFiles) {
                 if (!name.endsWith(".h2.db")) {
                     continue;

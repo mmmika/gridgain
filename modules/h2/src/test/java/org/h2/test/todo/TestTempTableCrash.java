@@ -44,7 +44,7 @@ public class TestTempTableCrash {
         //      "data/test;PAGE_SIZE=64";
 
         Class.forName("org.h2.Driver");
-        DeleteDbFiles.execute("data", "test", true);
+        DeleteDbFiles.execute("target/data", "test", true);
         conn = DriverManager.getConnection(url, "sa", "sa");
         stat = conn.createStatement();
 

@@ -26,7 +26,7 @@ public class TestDiskSpaceLeak {
      * @param args ignored
      */
     public static void main(String... args) throws Exception {
-        DeleteDbFiles.execute("data", null, true);
+        DeleteDbFiles.execute("target/data", null, true);
         Class.forName("org.h2.Driver");
         Connection conn;
         long before = 0;
@@ -70,7 +70,7 @@ public class TestDiskSpaceLeak {
             } finally {
                 JdbcUtils.closeSilently(conn);
             }
-            long now = new File("data/test.h2.db").length();
+            long now = new File("target/data/test.h2.db").length();
             long diff = now - before;
             before = now;
             System.out.println(now + " " + diff + " " + i + " " + last);

@@ -22,7 +22,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     H2InMemoryMultiThreadTestSuite.class,
-    H2InMemoryMultiThreadLazyTestSuite.class,
+//    H2InMemoryMultiThreadLazyTestSuite.class,
 /*  H2MultiThreadTestSuite.class,
     H2PageStoreOffloadTestSuite.class,
     H2MVStoreWithNetworkingTestSuite.class,
