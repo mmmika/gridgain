@@ -26,7 +26,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.DataStructurePageLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.DataStructurePageLockListener;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -62,7 +62,7 @@ public abstract class DataStructure implements PageLockListener {
     protected ReuseList reuseList;
 
     /** */
-    protected final DataStructurePageLockTracker tracker;
+    protected final DataStructurePageLockListener delegate;
 
     /** Name (for debug purposes). */
     protected final String name;
@@ -83,7 +83,7 @@ public abstract class DataStructure implements PageLockListener {
         this.grpId = cacheId;
         this.pageMem = pageMem;
         this.wal = wal;
-        this.tracker = DataStructurePageLockTracker.createTracker(name);
+        this.delegate = DataStructurePageLockListener.createTracker(name);
         this.name = name;
     }
 
@@ -421,26 +421,26 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        tracker.onBeforeWriteLock(cacheId, pageId, page);
+        delegate.onBeforeWriteLock(cacheId, pageId, page);
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        tracker.onWriteLock(cacheId, pageId, page, pageAddr);
+        delegate.onWriteLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        tracker.onWriteUnlock(cacheId, pageId, page, pageAddr);
+        delegate.onWriteUnlock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        tracker.onBeforeReadLock(cacheId, pageId, page);
+        delegate.onBeforeReadLock(cacheId, pageId, page);
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        tracker.onReadLock(cacheId, pageId, page, pageAddr);
+        delegate.onReadLock(cacheId, pageId, page, pageAddr);
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        tracker.onReadUnlock(cacheId, pageId, page, pageAddr);
+        delegate.onReadUnlock(cacheId, pageId, page, pageAddr);
     }
 }

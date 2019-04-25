@@ -210,28 +210,4 @@ public class HeapArrayLockStackTest {
 
         System.out.println(lockStack);
     }
-
-    @Test
-    public void test() {
-        HeapArrayLockStack lockStack = new HeapArrayLockStack(Thread.currentThread().getName());
-
-        int stackSize = 2;
-        long start = System.currentTimeMillis();
-
-        for (int i = 0; i < stackSize; i++) {
-            int pageId = i + 1;
-
-            lockStack.onBeforeReadLock(CACHE_ID, pageId, pageId);
-
-            lockStack.onReadLock(CACHE_ID, pageId, pageId, pageId);
-        }
-
-        for (int i = stackSize; i > 0; i--) {
-            //int pageId = i;
-
-           // lockStack.onReadUnlock(CACHE_ID, pageId, pageId, pageId);
-        }
-
-        System.out.println((System.currentTimeMillis() - start) + " ms");
-    }
 }
