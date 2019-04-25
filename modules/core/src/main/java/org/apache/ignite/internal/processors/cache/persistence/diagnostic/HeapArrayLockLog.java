@@ -13,8 +13,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockLog
-    extends AbstractPageLockTracker<HeapArrayLockLog.LocksState>
-    implements PageLockListener {
+    extends AbstractPageLockTracker<HeapArrayLockLog.LocksState> {
     private static final int OP_OFFSET = 16;
     private static final int LOCK_IDX_MASK = 0xFFFF0000;
     private static final int LOCK_OP_MASK = 0x000000000000FF;

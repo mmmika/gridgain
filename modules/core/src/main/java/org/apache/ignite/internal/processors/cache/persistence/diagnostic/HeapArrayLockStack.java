@@ -12,8 +12,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockStack
-    extends AbstractPageLockTracker<HeapArrayLockStack.LocksStateSnapshot>
-    implements PageLockListener {
+    extends AbstractPageLockTracker<HeapArrayLockStack.LocksStateSnapshot> {
     private static final int STACK_SIZE = 128;
 
     protected int headIdx;
