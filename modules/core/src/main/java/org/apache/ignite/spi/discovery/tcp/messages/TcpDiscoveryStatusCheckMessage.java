@@ -62,6 +62,19 @@ public class TcpDiscoveryStatusCheckMessage extends TcpDiscoveryAbstractMessage 
     }
 
     /**
+     * Constructor.
+     *
+     * @param creatorNodeId Creator node id.
+     * @param failedNodeId Failed node id.
+     */
+    public TcpDiscoveryStatusCheckMessage(UUID creatorNodeId, UUID failedNodeId) {
+        super(creatorNodeId);
+
+        this.creatorNode = null;
+        this.failedNodeId = failedNodeId;
+    }
+
+    /**
      * @param msg Message to copy.
      */
     public TcpDiscoveryStatusCheckMessage(TcpDiscoveryStatusCheckMessage msg) {

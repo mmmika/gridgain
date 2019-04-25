@@ -20,6 +20,9 @@ import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryDuplicateIdMessage;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 
@@ -55,7 +58,13 @@ public enum IgniteFeatures {
 
 
     /** Displaying versbose transaction information: --info option of --tx control script command. */
-    TX_INFO_COMMAND(7);
+    TX_INFO_COMMAND(7),
+
+    /**
+     * Send in {@link TcpDiscoveryDuplicateIdMessage} and {@link TcpDiscoveryStatusCheckMessage} nodeId instead of
+     * {@link TcpDiscoveryNode}.
+     */
+    TCP_DISCOVERY_MSG_NODE_ID_INSTEAD_NODE(9);
 
     /**
      * Unique feature identifier.
@@ -120,7 +129,7 @@ public enum IgniteFeatures {
      * @param nodes cluster nodes to check their feature support.
      * @return if feature is declared to be supported by all nodes
      */
-    public static boolean allNodesSupports(Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+    public static boolean allNodesSupports(Iterable<? extends ClusterNode> nodes, IgniteFeatures feature) {
         for (ClusterNode next : nodes) {
             if (!nodeSupports(next, feature))
                 return false;
