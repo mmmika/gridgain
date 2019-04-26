@@ -175,7 +175,7 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
     @Override public T dump() {
         dump = true;
 
-        awaitDump();
+        awaitLocks();
 
         T dump0 = dump0();
 
