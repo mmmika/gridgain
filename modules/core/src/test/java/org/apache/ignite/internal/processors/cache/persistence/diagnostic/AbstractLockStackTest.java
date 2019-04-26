@@ -1,6 +1,5 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -18,13 +17,13 @@ import static java.util.Arrays.stream;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker.BEFORE_READ_LOCK;
 
 public abstract class AbstractLockStackTest {
-    protected static final int CACHE_ID = 123;
+    protected static final int STRUCTURE_ID = 123;
 
-    protected abstract AbstractPageLockTracker<LocksStackSnapshot> createLockTracer(String name);
+    protected abstract AbstractPageLockTracker<LocksStackSnapshot> createLockStackTracer(String name);
 
     @Test
     public void testOneReadPageLock() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId = 1;
         long page = 2;
@@ -32,7 +31,7 @@ public abstract class AbstractLockStackTest {
 
         LocksStackSnapshot dump;
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId, page);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId, page);
 
         System.out.println(lockStack);
 
@@ -43,7 +42,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId, page, pageAddr);
+        lockStack.onReadLock(STRUCTURE_ID, pageId, page, pageAddr);
 
         System.out.println(lockStack);
 
@@ -54,7 +53,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId, page, pageAddr);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId, page, pageAddr);
 
         System.out.println(lockStack);
 
@@ -68,7 +67,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testTwoReadPageLock() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -79,7 +78,7 @@ public abstract class AbstractLockStackTest {
 
         LocksStackSnapshot dump;
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId1, page1);
 
         System.out.println(lockStack);
 
@@ -90,7 +89,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId1, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -101,7 +100,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId2, page2);
 
         System.out.println(lockStack);
 
@@ -112,7 +111,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId2, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadLock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -124,7 +123,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -136,7 +135,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -150,7 +149,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_1() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -164,7 +163,7 @@ public abstract class AbstractLockStackTest {
 
         LocksStackSnapshot dump;
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId1, page1);
 
         System.out.println(lockStack);
 
@@ -175,7 +174,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId1, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -186,7 +185,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId2, page2);
 
         System.out.println(lockStack);
 
@@ -197,7 +196,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId2, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadLock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -209,7 +208,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId3, page3);
 
         System.out.println(lockStack);
 
@@ -221,7 +220,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId3, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadLock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -234,7 +233,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -247,7 +246,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -260,7 +259,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -274,7 +273,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_2() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -288,7 +287,7 @@ public abstract class AbstractLockStackTest {
 
         LocksStackSnapshot dump;
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId1, page1);
 
         System.out.println(lockStack);
 
@@ -299,7 +298,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId1, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -310,7 +309,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId2, page2);
 
         System.out.println(lockStack);
 
@@ -321,7 +320,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId2, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadLock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -333,7 +332,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -345,7 +344,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId3, page3);
 
         System.out.println(lockStack);
 
@@ -356,7 +355,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId3, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadLock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -368,7 +367,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -380,7 +379,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -394,7 +393,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_3() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -408,7 +407,7 @@ public abstract class AbstractLockStackTest {
 
         LocksStackSnapshot dump;
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId1, page1);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId1, page1);
 
         System.out.println(lockStack);
 
@@ -419,7 +418,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId1, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -430,7 +429,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId2, page2);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId2, page2);
 
         System.out.println(lockStack);
 
@@ -441,7 +440,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId2, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadLock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -453,7 +452,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onBeforeReadLock(CACHE_ID, pageId3, page3);
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId3, page3);
 
         System.out.println(lockStack);
 
@@ -465,7 +464,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(pageId3, dump.nextOpPageId);
         Assert.assertEquals(BEFORE_READ_LOCK, dump.nextOp);
 
-        lockStack.onReadLock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadLock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -478,7 +477,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId2, page2, pageAddr2);
 
         System.out.println(lockStack);
 
@@ -491,7 +490,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId3, page3, pageAddr3);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId3, page3, pageAddr3);
 
         System.out.println(lockStack);
 
@@ -504,7 +503,7 @@ public abstract class AbstractLockStackTest {
         Assert.assertEquals(0, dump.nextOpPageId);
         Assert.assertEquals(0, dump.nextOp);
 
-        lockStack.onReadUnlock(CACHE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId1, page1, pageAddr1);
 
         System.out.println(lockStack);
 
@@ -518,7 +517,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testMultiThreadDump() throws IgniteCheckedException {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockTracer(Thread.currentThread().getName());
+        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId = 1;
         long page = 2;
@@ -539,11 +538,11 @@ public abstract class AbstractLockStackTest {
                 randomLocks(deep, () -> {
                     awaitRandom(100);
 
-                    lockStack.onBeforeReadLock(CACHE_ID, pageId, page);
+                    lockStack.onBeforeReadLock(STRUCTURE_ID, pageId, page);
 
                     awaitRandom(100);
 
-                    lockStack.onReadLock(CACHE_ID, pageId, page, pageAddr);
+                    lockStack.onReadLock(STRUCTURE_ID, pageId, page, pageAddr);
                 });
 
                 try {
@@ -551,7 +550,7 @@ public abstract class AbstractLockStackTest {
                 }
                 finally {
                     randomLocks(deep, () -> {
-                        lockStack.onReadUnlock(CACHE_ID, pageId, page, pageAddr);
+                        lockStack.onReadUnlock(STRUCTURE_ID, pageId, page, pageAddr);
                     });
                 }
             }
