@@ -125,8 +125,12 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
 
     protected abstract void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr);
 
-    protected boolean isInvalid() {
+    public boolean isInvalid() {
         return invalidCtx != null;
+    }
+
+    public InvalidContext<T> invalidContext() {
+        return invalidCtx;
     }
 
     protected void invalid(String msg) {
