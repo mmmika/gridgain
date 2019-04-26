@@ -201,6 +201,10 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
         throw new UnsupportedOperationException();
     }
 
+    protected static String argsToString(int structureId, long pageId, int flags) {
+        return "[structureId=" + structureId + ", pageId" + pageIdToString(pageId) + "]";
+    }
+
     protected static String pageIdToString(long pageId) {
         return "pageId=" + pageId
             + " [pageIdxHex=" + hexLong(pageId)

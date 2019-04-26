@@ -1,11 +1,9 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
-import java.util.NoSuchElementException;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
 
 import static java.util.Arrays.copyOf;
-import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 
 public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapshot> {
     private static final int STACK_SIZE = 128;
@@ -14,8 +12,9 @@ public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapsh
 
     private final long[] pageIdLocksStack;
 
-    private long nextOpPageId;
     private int nextOp;
+    private int nextOpStructureId;
+    private long nextOpPageId;
 
     public HeapArrayLockStack(String name) {
         super("name=" + name);
@@ -48,32 +47,42 @@ public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapsh
         pop(structureId, pageId, READ_UNLOCK);
     }
 
-    private void push(int cacheId, long pageId, int flags) {
-        reset();
+    private void push(int structureId, long pageId, int flags) {
+        reset(flags);
 
-        assert pageId > 0;
+        if (headIdx + 1 > pageIdLocksStack.length) {
+            invalid("Stack overflow, size=" + pageIdLocksStack.length +
+                ", headIdx=" + headIdx + ", " + argsToString(structureId, pageId, flags));
 
-        if (headIdx + 1 > pageIdLocksStack.length)
-            throw new StackOverflowError("Stack overflow, size:" + pageIdLocksStack.length);
+            return;
+        }
 
         long pageId0 = pageIdLocksStack[headIdx];
 
-        assert pageId0 == 0L : "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
+        if (pageId0 != 0L) {
+            invalid("Head should be empty, headIdx=" + headIdx +
+                ", pageIdOnHead=" + pageId0 + ", " + argsToString(structureId, pageId, flags));
+
+            return;
+        }
 
         pageIdLocksStack[headIdx] = pageId;
 
         headIdx++;
     }
 
-    private void reset() {
+    private void reset(int flags) {
+        if (flags != READ_LOCK || flags != WRITE_LOCK) {
+            //TODO
+        }
+
         nextOpPageId = 0;
         nextOp = 0;
+        nextOpStructureId = 0;
     }
 
-    private void pop(int cacheId, long pageId, int flags) {
-        assert pageId > 0;
-
-        reset();
+    private void pop(int structureId, long pageId, int flags) {
+        reset(flags);
 
         if (headIdx > 1) {
             int last = headIdx - 1;
@@ -98,42 +107,46 @@ public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapsh
                     }
                 }
 
-                assert false : "Never should happened since with obtaine lock (push to stack) before unlock.\n"
-                    + toString();
+                invalid("Can not find pageId in stack, " + argsToString(structureId, pageId, flags));
             }
         }
         else {
+            if (headIdx <= 0) {
+                invalid("HeadIdx can not be less or equals that zero, headIdx="
+                    + headIdx + ", " + argsToString(structureId, pageId, flags));
+
+                return;
+            }
+
             long val = pageIdLocksStack[0];
 
-            if (val == 0)
-                throw new NoSuchElementException(
-                    "Stack is empty, can not pop elemnt with cacheId=" +
-                        cacheId + ", pageId=" + pageId + ", flags=" + hexInt(flags));
+            if (val == 0) {
+                invalid("Stack is empty, can not pop elemnt, " + argsToString(structureId, pageId, flags));
+
+                return;
+            }
 
             if (val == pageId) {
-                for (int i = 0; i < headIdx; i++)
-                    pageIdLocksStack[i] = 0;
-
+                pageIdLocksStack[0] = 0;
                 headIdx = 0;
             }
             else
-                // Corner case, we have only one elemnt on stack, but it not equals pageId for pop.
-                assert false;
+                invalid("Can not find pageId in stack, " + argsToString(structureId, pageId, flags));
         }
     }
 
-
     /** {@inheritDoc} */
     @Override public LocksStackSnapshot dump0() {
-        long[] stack = copyOf(this.pageIdLocksStack, this.pageIdLocksStack.length);
+        long[] stack = copyOf(pageIdLocksStack, pageIdLocksStack.length);
 
         return new LocksStackSnapshot(
-            this.name,
+            name,
             System.currentTimeMillis(),
             headIdx,
             stack,
-            nextOpPageId,
-            nextOp
+            nextOp,
+            nextOpStructureId,
+            nextOpPageId
         );
     }
 }

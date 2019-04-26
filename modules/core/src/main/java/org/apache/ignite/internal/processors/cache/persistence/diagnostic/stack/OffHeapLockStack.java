@@ -21,8 +21,9 @@ public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot
 
     private long headIdx;
 
-    private long nextOpPageId;
     private int nextOp;
+    private int nextOpStructureId;
+    private long nextOpPageId;
 
     public OffHeapLockStack(String name) {
         super(name);
@@ -155,10 +156,6 @@ public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot
 
         GridUnsafe.copyMemory(null, ptr, buf.array(), GridUnsafe.LONG_ARR_OFF, CAPACITY);
 
-        int headIdx = (int)this.headIdx;
-        int nextOp = this.nextOp;
-        long nextOpPageId = this.nextOpPageId;
-
         long[] stack = buf.array();
 
         assert stack.length == CAPACITY;
@@ -166,10 +163,11 @@ public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot
         return new LocksStackSnapshot(
             name,
             System.currentTimeMillis(),
-            headIdx,
+            (int)headIdx,
             stack,
-            nextOpPageId,
-            nextOp
+            nextOp,
+            nextOpStructureId,
+            nextOpPageId
         );
     }
 }

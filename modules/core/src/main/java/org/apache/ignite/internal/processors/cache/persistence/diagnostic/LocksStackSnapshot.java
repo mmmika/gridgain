@@ -22,23 +22,26 @@ public class LocksStackSnapshot implements Dump {
 
     public final long[] pageIdLocksStack;
 
-    public final long nextOpPageId;
     public final int nextOp;
+    public final int nextOpStructureId;
+    public final long nextOpPageId;
 
     public LocksStackSnapshot(
         String name,
         long time,
         int headIdx,
         long[] pageIdLocksStack,
-        long panextOpPageIde,
-        int nextOp
+        int nextOp,
+        int nextOpStructureId,
+        long panextOpPageIde
     ) {
         this.name = name;
         this.time = time;
         this.headIdx = headIdx;
         this.pageIdLocksStack = pageIdLocksStack;
-        nextOpPageId = panextOpPageIde;
         this.nextOp = nextOp;
+        this.nextOpStructureId = nextOpStructureId;
+        this.nextOpPageId = panextOpPageIde;
     }
 
     @Override public String toString() {
