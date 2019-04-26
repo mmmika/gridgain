@@ -1,7 +1,5 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
-import java.util.Arrays;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.HeapArrayLockStack.LocksStateSnapshot;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,7 +17,7 @@ public class HeapArrayLockStackTest {
         long page = 2;
         long pageAddr = 3;
 
-        LocksStateSnapshot dump;
+        LocksStackSnapshot dump;
 
         lockStack.onBeforeReadLock(CACHE_ID, pageId, page);
 

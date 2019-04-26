@@ -79,7 +79,7 @@ public class JmhPageListenerLockTrackerBenchmark extends JmhAbstractBenchmark {
         @Param({"2", "4", "8", "16"})
         int stackSize;
 
-        @Param({"HeapArrayLockStack", "HeapArrayLockLog", "OffHeapLockStack"})
+        @Param({"HeapArrayLockStack", "OffHeapLockStack"})
         String type;
 
         int cacheId = 123;

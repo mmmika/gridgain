@@ -3,6 +3,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 import java.util.NoSuchElementException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
@@ -11,8 +12,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class HeapArrayLockStack
-    extends AbstractPageLockTracker<HeapArrayLockStack.LocksStateSnapshot> {
+public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapshot> {
     private static final int STACK_SIZE = 128;
 
     protected int headIdx;
@@ -129,15 +129,16 @@ public class HeapArrayLockStack
 
 
     /** {@inheritDoc} */
-    @Override public LocksStateSnapshot dump() {
+    @Override public LocksStackSnapshot dump() {
         prepareDump();
 
         awaitLocks();
 
         long[] stack = copyOf(this.pageIdLocksStack, this.pageIdLocksStack.length);
 
-        LocksStateSnapshot locksStateSnapshot = new LocksStateSnapshot(
-            this.name + " (time=" + System.currentTimeMillis() + ")",
+        LocksStackSnapshot locksStateSnapshot = new LocksStackSnapshot(
+            this.name,
+            System.currentTimeMillis(),
             headIdx,
             stack,
             nextOpPageId,
@@ -147,72 +148,5 @@ public class HeapArrayLockStack
         onDumpComplete();
 
         return locksStateSnapshot;
-    }
-
-    public static class LocksStateSnapshot implements Dump {
-        public final String name;
-
-        public final int headIdx;
-
-        public final long[] pageIdLocksStack;
-
-        public final long nextOpPageId;
-        public final int nextOp;
-
-        public LocksStateSnapshot(
-            String name,
-            int headIdx,
-            long[] pageIdLocksStack,
-            long panextOpPageIde,
-            int nextOp
-        ) {
-            this.name = name;
-            this.headIdx = headIdx;
-            this.pageIdLocksStack = pageIdLocksStack;
-            nextOpPageId = panextOpPageIde;
-            this.nextOp = nextOp;
-        }
-
-        @Override public String toString() {
-            SB res = new SB();
-
-            res.a(name).a(", locked pages stack:\n");
-
-            if (nextOpPageId != 0) {
-                String str = "N/A";
-
-                if (nextOp == BEFORE_READ_LOCK)
-                    str = "obtain read lock";
-                else if (nextOp == BEFORE_WRITE_LOCK)
-                    str = "obtain write lock";
-
-                res.a("\t-> try " + str + ", " + pageIdToString(nextOpPageId) + "\n");
-            }
-
-            for (int i = headIdx - 1; i >= 0; i--) {
-                long pageId = pageIdLocksStack[i];
-
-                if (pageId == 0 && i == 0)
-                    break;
-
-                if (pageId == 0) {
-                    res.a("\t" + i + " -\n");
-                }
-                else {
-                    res.a("\t" + i + " " + pageIdToString(pageId) + "\n");
-                }
-            }
-
-            res.a("\n");
-
-            return res.toString();
-        }
-
-        private String pageIdToString(long pageId) {
-            return "pageId=" + pageId
-                + " [pageIdxHex=" + hexLong(pageId)
-                + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-                + ", flags=" + hexInt(flag(pageId)) + "]";
-        }
     }
 }

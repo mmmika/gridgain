@@ -1,141 +1,52 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.NoSuchElementException;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.GridUnsafe;
 
 import static java.util.Arrays.copyOf;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
-import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public class OffHeapLockStack implements PageLockListener {
-    private static final int READ_LOCK = 1;
-    private static final int READ_UNLOCK = 2;
-    private static final int WRITE_LOCK = 3;
-    private static final int WRITE_UNLOCK = 4;
-    private static final int BEFORE_READ_LOCK = 5;
-    private static final int BEFORE_WRITE_LOCK = 6;
-
+public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot> {
     private static final int STACK_SIZE = 128;
-
-    private final String name;
 
     private final long ptr;
 
     private long headIdx;
 
-    private long nextPage;
-    private int op;
-
-    private volatile boolean dump;
-
-    private volatile boolean locked;
+    private long nextOpPageId;
+    private int nextOp;
 
     public OffHeapLockStack(String name) {
-        this.name = name;
+        super(name);
+
         this.ptr = allocate(STACK_SIZE);
     }
 
-    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        checkDump();
-
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeWriteLock(cacheId, pageId, page);
-
-            return;
-        }
-
-        nextPage = pageId;
-        op = BEFORE_WRITE_LOCK;
-        locked = false;
+    @Override protected void onBeforeWriteLock0(int cacheId, long pageId, long page) {
+        nextOpPageId = pageId;
+        nextOp = BEFORE_WRITE_LOCK;
     }
 
-    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
-
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteLock(cacheId, pageId, page, pageAddr);
-
-            return;
-        }
-
+    @Override protected void onWriteLock0(int cacheId, long pageId, long page, long pageAddr) {
         push(cacheId, pageId, WRITE_LOCK);
-        locked = false;
     }
 
-    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
-
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onWriteUnlock(cacheId, pageId, page, pageAddr);
-
-            return;
-        }
-
+    @Override protected void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr) {
         pop(cacheId, pageId, WRITE_UNLOCK);
-
-        locked = false;
     }
 
-    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        checkDump();
-
-        locked = true;
-        if (dump) {
-            locked = false;
-
-            onBeforeReadLock(cacheId, pageId, page);
-
-            return;
-        }
-
-        nextPage = pageId;
-        op = BEFORE_READ_LOCK;
-        locked = false;
+    @Override protected void onBeforeReadLock0(int cacheId, long pageId, long page) {
+        nextOpPageId = pageId;
+        nextOp = BEFORE_READ_LOCK;
     }
 
-    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
-
-        locked = true;
-
-        if (dump) {
-            locked = false;
-
-            onReadLock(cacheId, pageId, page, pageAddr);
-            return;
-        }
-
+    @Override protected void onReadLock0(int cacheId, long pageId, long page, long pageAddr) {
         push(cacheId, pageId, READ_LOCK);
-        locked = false;
     }
 
-    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        checkDump();
-
-        locked = true;
-
-        if (dump) {
-            locked = false;
-
-            onReadUnlock(cacheId, pageId, page, pageAddr);
-            return;
-        }
-
+    @Override protected void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr) {
         pop(cacheId, pageId, READ_UNLOCK);
-        locked = false;
     }
 
     private void push(int cacheId, long pageId, int flags) {
@@ -146,20 +57,20 @@ public class OffHeapLockStack implements PageLockListener {
         if (headIdx + 1 > STACK_SIZE)
             throw new StackOverflowError("Stack overflow, size:" + STACK_SIZE);
 
-        long pageId0 = pageIdByIndex(headIdx);
+        long pageId0 = setPageId(headIdx);
 
         assert pageId0 == 0L : "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", pageId=" + pageId;
 
-        pageIdByIndex(headIdx, pageId);
+        setPageId(headIdx, pageId);
 
         headIdx++;
     }
 
-    private long pageIdByIndex(long headIdx) {
+    private long setPageId(long headIdx) {
         return GridUnsafe.getLong(ptr + offset(headIdx));
     }
 
-    private void pageIdByIndex(long headIdx, long pageId) {
+    private void setPageId(long headIdx, long pageId) {
         GridUnsafe.putLong(ptr + offset(headIdx), pageId);
     }
 
@@ -168,8 +79,8 @@ public class OffHeapLockStack implements PageLockListener {
     }
 
     private void reset() {
-        nextPage = 0;
-        op = 0;
+        nextOpPageId = 0;
+        nextOp = 0;
     }
 
     private void pop(int cacheId, long pageId, int flags) {
@@ -180,21 +91,21 @@ public class OffHeapLockStack implements PageLockListener {
         if (headIdx > 1) {
             long last = headIdx - 1;
 
-            long pageId0 = pageIdByIndex(last);
+            long pageId0 = setPageId(last);
 
             if (pageId0 == pageId) {
-                pageIdByIndex(last, 0);
+                setPageId(last, 0);
 
                 //Reset head to the first not empty element.
                 do {
                     headIdx--;
                 }
-                while (headIdx - 1 >= 0 && pageIdByIndex(headIdx - 1) == 0);
+                while (headIdx - 1 >= 0 && setPageId(headIdx - 1) == 0);
             }
             else {
                 for (long idx = last - 1; idx >= 0; idx--) {
-                    if (pageIdByIndex(idx) == pageId) {
-                        pageIdByIndex(idx, 0);
+                    if (setPageId(idx) == pageId) {
+                        setPageId(idx, 0);
 
                         return;
                     }
@@ -205,7 +116,7 @@ public class OffHeapLockStack implements PageLockListener {
             }
         }
         else {
-            long val = pageIdByIndex(0);
+            long val = setPageId(0);
 
             if (val == 0)
                 throw new NoSuchElementException(
@@ -214,7 +125,7 @@ public class OffHeapLockStack implements PageLockListener {
 
             if (val == pageId) {
                 for (int idx = 0; idx < headIdx; idx++)
-                    pageIdByIndex(idx, 0);
+                    setPageId(idx, 0);
 
                 headIdx = 0;
             }
@@ -228,52 +139,26 @@ public class OffHeapLockStack implements PageLockListener {
         return GridUnsafe.allocateMemory(size);
     }
 
-    private void checkDump() {
-        while (dump) {
-            // Busy wait.
-        }
-    }
+    @Override public LocksStackSnapshot dump() {
+        prepareDump();
 
-    public State dump() {
-        dump = true;
+        awaitLocks();
 
-        while (locked) {
-            // Busy wait.
-        }
         long[] stack = new long[STACK_SIZE];
 
         GridUnsafe.copyMemory(null, ptr, stack, 0, STACK_SIZE);
 
-        State state = new State(this.name + " (time=" + System.currentTimeMillis() + ")", stack);
-        state.headIdx = headIdx;
-        state.nextPage = nextPage;
-        state.op = op;
+        LocksStackSnapshot locksStateSnapshot = new LocksStackSnapshot(
+            this.name,
+            System.currentTimeMillis(),
+            (int)headIdx,
+            stack,
+            nextOpPageId,
+            nextOp
+        );
 
-        dump = false;
+        onDumpComplete();
 
-        return state;
-    }
-
-    public static class State {
-        private final String name;
-
-        private long headIdx;
-
-        private final long[] arrPageIds;
-
-        private long nextPage;
-        private int op;
-
-        public State(String name, long[] arrPageIds) {
-            this.name = name;
-            this.arrPageIds = arrPageIds;
-        }
-    }
-
-    private String pageIdToString(long pageId) {
-        return "pageId=" + pageId
-            + " [pageIdxHex=" + hexLong(pageId)
-            + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)
-            + ", flags=" + hexInt(flag(pageId)) + "]";
+        return locksStateSnapshot;
     }
 }
