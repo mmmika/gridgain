@@ -29,101 +29,101 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
         this.name = name;
     }
 
-    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
+    @Override public void onBeforeWriteLock(int structureId, long pageId, long page) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onBeforeWriteLock0(cacheId, pageId, page);
+            onBeforeWriteLock0(structureId, pageId, page);
         }
         finally {
             unLock();
         }
     }
 
-    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
+    @Override public void onWriteLock(int structureId, long pageId, long page, long pageAddr) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onWriteLock0(cacheId, pageId, page, pageAddr);
+            onWriteLock0(structureId, pageId, page, pageAddr);
         }
         finally {
             unLock();
         }
     }
 
-    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
+    @Override public void onWriteUnlock(int structureId, long pageId, long page, long pageAddr) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onWriteUnlock0(cacheId, pageId, page, pageAddr);
+            onWriteUnlock0(structureId, pageId, page, pageAddr);
         }
         finally {
             unLock();
         }
     }
 
-    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
+    @Override public void onBeforeReadLock(int structureId, long pageId, long page) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onBeforeReadLock0(cacheId, pageId, page);
+            onBeforeReadLock0(structureId, pageId, page);
         }
         finally {
             unLock();
         }
     }
 
-    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
+    @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onReadLock0(cacheId, pageId, page, pageAddr);
+            onReadLock0(structureId, pageId, page, pageAddr);
         }
         finally {
             unLock();
         }
     }
 
-    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
+    @Override public void onReadUnlock(int structureId, long pageId, long page, long pageAddr) {
         if (isInvalid())
             return;
 
         lock();
 
         try {
-            onReadUnlock0(cacheId, pageId, page, pageAddr);
+            onReadUnlock0(structureId, pageId, page, pageAddr);
         }
         finally {
             unLock();
         }
     }
 
-    protected abstract void onBeforeWriteLock0(int cacheId, long pageId, long page);
+    protected abstract void onBeforeWriteLock0(int structureId, long pageId, long page);
 
-    protected abstract void onWriteLock0(int cacheId, long pageId, long page, long pageAddr);
+    protected abstract void onWriteLock0(int structureId, long pageId, long page, long pageAddr);
 
-    protected abstract void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr);
+    protected abstract void onWriteUnlock0(int structureId, long pageId, long page, long pageAddr);
 
-    protected abstract void onBeforeReadLock0(int cacheId, long pageId, long page);
+    protected abstract void onBeforeReadLock0(int structureId, long pageId, long page);
 
-    protected abstract void onReadLock0(int cacheId, long pageId, long page, long pageAddr);
+    protected abstract void onReadLock0(int structureId, long pageId, long page, long pageAddr);
 
-    protected abstract void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr);
+    protected abstract void onReadUnlock0(int structureId, long pageId, long page, long pageAddr);
 
     public boolean isInvalid() {
         return invalidCtx != null;

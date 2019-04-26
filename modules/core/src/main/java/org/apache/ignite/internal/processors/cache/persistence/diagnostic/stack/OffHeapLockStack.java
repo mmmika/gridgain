@@ -30,30 +30,30 @@ public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot
         this.ptr = allocate(STACK_SIZE);
     }
 
-    @Override protected void onBeforeWriteLock0(int cacheId, long pageId, long page) {
+    @Override protected void onBeforeWriteLock0(int structureId, long pageId, long page) {
         nextOpPageId = pageId;
         nextOp = BEFORE_WRITE_LOCK;
     }
 
-    @Override protected void onWriteLock0(int cacheId, long pageId, long page, long pageAddr) {
-        push(cacheId, pageId, WRITE_LOCK);
+    @Override protected void onWriteLock0(int structureId, long pageId, long page, long pageAddr) {
+        push(structureId, pageId, WRITE_LOCK);
     }
 
-    @Override protected void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr) {
-        pop(cacheId, pageId, WRITE_UNLOCK);
+    @Override protected void onWriteUnlock0(int structureId, long pageId, long page, long pageAddr) {
+        pop(structureId, pageId, WRITE_UNLOCK);
     }
 
-    @Override protected void onBeforeReadLock0(int cacheId, long pageId, long page) {
+    @Override protected void onBeforeReadLock0(int structureId, long pageId, long page) {
         nextOpPageId = pageId;
         nextOp = BEFORE_READ_LOCK;
     }
 
-    @Override protected void onReadLock0(int cacheId, long pageId, long page, long pageAddr) {
-        push(cacheId, pageId, READ_LOCK);
+    @Override protected void onReadLock0(int structureId, long pageId, long page, long pageAddr) {
+        push(structureId, pageId, READ_LOCK);
     }
 
-    @Override protected void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr) {
-        pop(cacheId, pageId, READ_UNLOCK);
+    @Override protected void onReadUnlock0(int structureId, long pageId, long page, long pageAddr) {
+        pop(structureId, pageId, READ_UNLOCK);
     }
 
     private void push(int cacheId, long pageId, int flags) {

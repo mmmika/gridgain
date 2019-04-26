@@ -33,32 +33,32 @@ public class HeapArrayLockLog
         super("name=" + name);
     }
 
-    @Override protected void onBeforeWriteLock0(int cacheId, long pageId, long page) {
-        this.nextOpCacheId = cacheId;
+    @Override protected void onBeforeWriteLock0(int structureId, long pageId, long page) {
+        this.nextOpCacheId = structureId;
         this.nextOpPageId = pageId;
         this.nextOp = BEFORE_WRITE_LOCK;
     }
 
-    @Override protected void onWriteLock0(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, WRITE_LOCK);
+    @Override protected void onWriteLock0(int structureId, long pageId, long page, long pageAddr) {
+        log(structureId, pageId, WRITE_LOCK);
     }
 
-    @Override protected void onWriteUnlock0(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, WRITE_UNLOCK);
+    @Override protected void onWriteUnlock0(int structureId, long pageId, long page, long pageAddr) {
+        log(structureId, pageId, WRITE_UNLOCK);
     }
 
-    @Override protected void onBeforeReadLock0(int cacheId, long pageId, long page) {
-        this.nextOpCacheId = cacheId;
+    @Override protected void onBeforeReadLock0(int structureId, long pageId, long page) {
+        this.nextOpCacheId = structureId;
         this.nextOpPageId = pageId;
         this.nextOp = BEFORE_READ_LOCK;
     }
 
-    @Override protected void onReadLock0(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, READ_LOCK);
+    @Override protected void onReadLock0(int structureId, long pageId, long page, long pageAddr) {
+        log(structureId, pageId, READ_LOCK);
     }
 
-    @Override public void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr) {
-        log(cacheId, pageId, READ_UNLOCK);
+    @Override public void onReadUnlock0(int structureId, long pageId, long page, long pageAddr) {
+        log(structureId, pageId, READ_UNLOCK);
     }
 
     private void log(int cacheId, long pageId, int flags) {
