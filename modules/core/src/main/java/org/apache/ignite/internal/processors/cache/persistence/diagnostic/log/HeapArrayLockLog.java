@@ -1,8 +1,9 @@
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.log;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.Dump;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 
 import static java.util.Arrays.copyOf;
@@ -117,11 +118,7 @@ public class HeapArrayLockLog
         return major | minor;
     }
 
-    @Override public LocksState dump() {
-        prepareDump();
-
-        awaitLocks();
-
+    @Override public synchronized LocksState dump0() {
         long[] pageIdsLockLog = copyOf(this.pageIdsLockLog, this.pageIdsLockLog.length);
 
         LocksState locksState = new LocksState(this.name + " (time=" + System.currentTimeMillis() + ")", pageIdsLockLog);
@@ -129,8 +126,6 @@ public class HeapArrayLockLog
         locksState.nextOp = nextOp;
         locksState.nextOpCacheId = nextOpCacheId;
         locksState.nextOpPageId = nextOpPageId;
-
-        onDumpComplete();
 
         return locksState;
     }

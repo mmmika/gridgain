@@ -1,6 +1,12 @@
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.LongBuffer;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
 import org.apache.ignite.internal.util.GridUnsafe;
 
 import static java.util.Arrays.copyOf;
@@ -8,7 +14,8 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 
 public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot> {
-    private static final int STACK_SIZE = 128;
+    private static final int CAPACITY = 128;
+    private static final int STACK_SIZE = CAPACITY * 8;
 
     private final long ptr;
 
@@ -136,29 +143,33 @@ public class OffHeapLockStack extends AbstractPageLockTracker<LocksStackSnapshot
     }
 
     private long allocate(int size) {
-        return GridUnsafe.allocateMemory(size);
+        long ptr = GridUnsafe.allocateMemory(size);
+
+        GridUnsafe.setMemory(ptr, STACK_SIZE, (byte)0);
+
+        return ptr;
     }
 
-    @Override public LocksStackSnapshot dump() {
-        prepareDump();
+    @Override public LocksStackSnapshot dump0() {
+        LongBuffer buf = LongBuffer.allocate(CAPACITY);
 
-        awaitLocks();
+        GridUnsafe.copyMemory(null, ptr, buf.array(), GridUnsafe.LONG_ARR_OFF, CAPACITY);
 
-        long[] stack = new long[STACK_SIZE];
+        int headIdx = (int)this.headIdx;
+        int nextOp = this.nextOp;
+        long nextOpPageId = this.nextOpPageId;
 
-        GridUnsafe.copyMemory(null, ptr, stack, 0, STACK_SIZE);
+        long[] stack = buf.array();
 
-        LocksStackSnapshot locksStateSnapshot = new LocksStackSnapshot(
-            this.name,
+        assert stack.length == CAPACITY;
+
+        return new LocksStackSnapshot(
+            name,
             System.currentTimeMillis(),
-            (int)headIdx,
+            headIdx,
             stack,
             nextOpPageId,
             nextOp
         );
-
-        onDumpComplete();
-
-        return locksStateSnapshot;
     }
 }

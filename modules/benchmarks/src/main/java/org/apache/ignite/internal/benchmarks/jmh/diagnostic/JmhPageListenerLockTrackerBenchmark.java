@@ -2,9 +2,9 @@ package org.apache.ignite.internal.benchmarks.jmh.diagnostic;
 
 import org.apache.ignite.internal.benchmarks.jmh.JmhAbstractBenchmark;
 import org.apache.ignite.internal.benchmarks.jmh.runner.JmhIdeBenchmarkRunner;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.HeapArrayLockLog;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.HeapArrayLockStack;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.OffHeapLockStack;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.log.HeapArrayLockLog;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.HeapArrayLockStack;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.OffHeapLockStack;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

@@ -9,7 +9,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public abstract class AbstractPageLockTracker<T> implements PageLockListener, DumpSupported {
+public abstract class AbstractPageLockTracker<T extends Dump> implements PageLockListener, DumpSupported<T> {
     protected static final int READ_LOCK = 1;
     protected static final int READ_UNLOCK = 2;
     protected static final int WRITE_LOCK = 3;
@@ -23,11 +23,16 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
 
     private volatile boolean locked;
 
+    private volatile InvalidContext<T> invalidCtx;
+
     protected AbstractPageLockTracker(String name) {
         this.name = name;
     }
 
     @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -39,6 +44,9 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
     }
 
     @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -50,6 +58,9 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
     }
 
     @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -61,6 +72,9 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
     }
 
     @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -72,6 +86,9 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
     }
 
     @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -83,6 +100,9 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
     }
 
     @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
+        if (isInvalid())
+            return;
+
         lock();
 
         try {
@@ -105,7 +125,17 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
 
     protected abstract void onReadUnlock0(int cacheId, long pageId, long page, long pageAddr);
 
-    protected void lock() {
+    protected boolean isInvalid() {
+        return invalidCtx != null;
+    }
+
+    protected void invalid(String msg) {
+        T dump = dump0();
+
+        invalidCtx = new InvalidContext<>(msg, dump);
+    }
+
+    private void lock() {
         while (!lock0()) {
             // Busy wait.
         }
@@ -124,28 +154,34 @@ public abstract class AbstractPageLockTracker<T> implements PageLockListener, Du
         return true;
     }
 
-    protected void unLock() {
+    private void unLock() {
         locked = false;
     }
 
-    protected void awaitDump() {
+    private void awaitDump() {
         while (dump) {
             // Busy wait.
         }
     }
 
-    protected void awaitLocks() {
+    private void awaitLocks() {
         while (locked) {
             // Busy wait.
         }
     }
 
-    protected void prepareDump() {
-        dump = true;
-    }
+    protected abstract T dump0();
 
-    protected void onDumpComplete() {
+    @Override public T dump() {
+        dump = true;
+
+        awaitDump();
+
+        T dump0 = dump0();
+
         dump = false;
+
+        return dump0;
     }
 
     /** {@inheritDoc} */

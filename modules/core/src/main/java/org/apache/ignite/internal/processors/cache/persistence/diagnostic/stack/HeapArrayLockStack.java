@@ -1,16 +1,11 @@
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
 import java.util.NoSuchElementException;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
-import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
 
 import static java.util.Arrays.copyOf;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.flag;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
-import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
-import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
 public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapshot> {
     private static final int STACK_SIZE = 128;
@@ -129,14 +124,10 @@ public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapsh
 
 
     /** {@inheritDoc} */
-    @Override public LocksStackSnapshot dump() {
-        prepareDump();
-
-        awaitLocks();
-
+    @Override public LocksStackSnapshot dump0() {
         long[] stack = copyOf(this.pageIdLocksStack, this.pageIdLocksStack.length);
 
-        LocksStackSnapshot locksStateSnapshot = new LocksStackSnapshot(
+        return new LocksStackSnapshot(
             this.name,
             System.currentTimeMillis(),
             headIdx,
@@ -144,9 +135,5 @@ public class HeapArrayLockStack extends AbstractPageLockTracker<LocksStackSnapsh
             nextOpPageId,
             nextOp
         );
-
-        onDumpComplete();
-
-        return locksStateSnapshot;
     }
 }

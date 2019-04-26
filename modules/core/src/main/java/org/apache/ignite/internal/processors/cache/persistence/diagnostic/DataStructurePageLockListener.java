@@ -2,6 +2,7 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.HeapArrayLockStack;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 
 public class DataStructurePageLockListener implements PageLockListener {

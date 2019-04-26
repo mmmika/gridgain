@@ -1,4 +1,7 @@
-package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
+package org.apache.ignite.internal.processors.cache.persistence.diagnostic.log;
+
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.Dump;
 
 public class OffHeapLockLog extends AbstractPageLockTracker {
 
@@ -30,7 +33,7 @@ public class OffHeapLockLog extends AbstractPageLockTracker {
 
     }
 
-    @Override public Dump dump() {
+    @Override protected Dump dump0() {
         return null;
     }
 }
