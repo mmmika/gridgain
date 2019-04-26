@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -135,7 +135,6 @@ import igniteChartSelector from './components/ignite-chart-series-selector';
 import statusOutput from './components/status-output';
 import timedRedirection from './components/timed-redirection';
 
-import pageProfile from './components/page-profile';
 import pagePasswordChanged from './components/page-password-changed';
 import pagePasswordReset from './components/page-password-reset';
 import pageSignup from './components/page-signup';
@@ -152,6 +151,9 @@ import igniteServices from './services';
 
 import baseTemplate from 'views/base.pug';
 import * as icons from '../public/images/icons';
+
+import uiRouter from '@uirouter/angularjs';
+import {upgradeModule} from '@uirouter/angular-hybrid';
 
 export default angular
     .module('ignite-console', [
@@ -174,7 +176,8 @@ export default angular
         'ui.grid.resizeColumns',
         'ui.grid.saveState',
         'ui.grid.selection',
-        'ui.router',
+        uiRouter,
+        upgradeModule.name,
         // Base modules.
         'ignite-console.core',
         'ignite-console.ace',
@@ -227,7 +230,6 @@ export default angular
         connectedClustersDialog.name,
         igniteListOfRegisteredUsers.name,
         dialogAdminCreateUser.name,
-        pageProfile.name,
         pageLanding.name,
         pagePasswordChanged.name,
         pagePasswordReset.name,
@@ -250,6 +252,8 @@ export default angular
         noDataCmp.name,
         globalProgressBar.name
     ])
+    // Routing should wait until Angular loads. Angular app part will start it back using serviceBootstrap component.
+    .config(['$urlServiceProvider', ($urlService) => $urlService.deferIntercept()])
     .service('$exceptionHandler', $exceptionHandler)
     // Directives.
     .directive('igniteAutoFocus', igniteAutoFocus)
@@ -371,7 +375,10 @@ export default angular
         /**
          * @param {ng.IRootScopeService} $root
          * @param {ng.IHttpService} $http
+         * @param $state
          * @param {ReturnType<typeof import('./services/Messages.service').default>} Messages
+         * @param User
+         * @param Notebook
          */
         ($root, $http, $state, Messages, User, Notebook) => { // eslint-disable-line no-shadow
             $root.revertIdentity = () => {

@@ -1,12 +1,12 @@
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
- * 
+ *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { Selector } from 'testcafe';
 import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
 import { createRegularUser } from '../../roles';
 import {pageProfile} from '../../page-models/pageProfile';
@@ -55,5 +54,5 @@ test('Testing user data change', async(t) => {
         .expect(pageProfile.lastName.control.value).eql(lastName)
         .expect(pageProfile.email.control.value).eql(email)
         .expect(pageProfile.company.control.value).eql(company)
-        .expect(pageProfile.country.control.innerText).eql(country);
+        .expect(pageProfile.country.control.value).eql(country);
 });

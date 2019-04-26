@@ -1,18 +1,17 @@
 //-
     Copyright 2019 GridGain Systems, Inc. and Contributors.
-    
+
     Licensed under the GridGain Community Edition License (the "License");
     you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
-    
+
         https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-    
+
     Unless required by applicable law or agreed to in writing, software
     distributed under the License is distributed on an "AS IS" BASIS,
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
 
 include /app/helpers/jade/mixins
 include /app/configuration/mixins
@@ -130,16 +129,15 @@ mixin td-ellipses-lbl(w, lbl)
                         .pc-form-grid-col-30
                             +form-field__dropdown({
                                 label: 'Action:',
-                                model: 'importCommon.action'
-                            })(
-                                bs-options='item.value as item.label for item in importActions'
-                            )
+                                model: 'importCommon.action',
+                                options: 'importActions'
+                            })
                         .pc-form-grid-col-30
                             +form-field__dropdown({
                                 label: 'Cache:',
-                                model: 'importCommon.cacheOrTemplate'
+                                model: 'importCommon.cacheOrTemplate',
+                                options: 'importCommon.cachesOrTemplates'
                             })(
-                                bs-options='item.value as item.label for item in importCommon.cachesOrTemplates'
                                 ng-change='$ctrl.onCacheSelect(importCommon.cacheOrTemplate)'
                             )
                         .pc-form-grid-col-60.pc-form-grid__text-only-item
