@@ -34,7 +34,7 @@ public class LocksStackSnapshot implements Dump {
         long[] pageIdLocksStack,
         int nextOp,
         int nextOpStructureId,
-        long panextOpPageIde
+        long nextOpPageId
     ) {
         this.name = name;
         this.time = time;
@@ -42,7 +42,7 @@ public class LocksStackSnapshot implements Dump {
         this.pageIdLocksStack = pageIdLocksStack;
         this.nextOp = nextOp;
         this.nextOpStructureId = nextOpStructureId;
-        this.nextOpPageId = panextOpPageIde;
+        this.nextOpPageId = nextOpPageId;
     }
 
     @Override public String toString() {
