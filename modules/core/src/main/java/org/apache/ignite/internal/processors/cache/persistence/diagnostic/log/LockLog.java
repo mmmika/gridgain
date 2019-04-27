@@ -50,17 +50,23 @@ public abstract class LockLog extends PageLockTracker<LockLogSnapshot> {
     private void log(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if ((headIdx + 2) / 2 > capacity())
-            throw new StackOverflowError("Stack overflow, size:" + capacity() +
-                " nextOpCacheId=" + cacheId + ", nextOpPageId=" + pageId + ", flags=" + flags +
-                "\n" + toString());
+        if ((headIdx + 2) / 2 > capacity()) {
+            invalid("Log overflow, size:" + capacity() +
+                " nextOpCacheId=" + cacheId + ", nextOpPageId=" + pageId + ", flags=" + flags);
+
+            return;
+        }
 
         long pageId0 = getByIndex(headIdx);
 
-        assert pageId0 == 0L || pageId0 == pageId :
-            "Head should be empty, headIdx=" + headIdx + ", pageId0=" + pageId0 + ", nextOpPageId=" + pageId;
+        if (pageId0 != 0L && pageId0 != pageId) {
+            invalid("Head should be empty, headIdx=" + headIdx + " " +
+                argsToString(cacheId, pageId, flags));
 
-        setByIndex(headIdx, pageId0);
+            return;
+        }
+
+        setByIndex(headIdx, pageId);
 
         if (READ_LOCK == flags || WRITE_LOCK == flags)
             holdedLockCnt++;

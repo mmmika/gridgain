@@ -27,8 +27,7 @@ public class LockLogSnapshot implements Dump {
 
     public final int headIdx;
 
-    public final long[] pageIdsLockLog;
-    public final long[] metaLog;
+    public final long[] pageLockLog;
 
     public final int nextOp;
     public final int nextOpStructureId;
@@ -39,7 +38,6 @@ public class LockLogSnapshot implements Dump {
         long time,
         int headIdx,
         long[] locklog,
-        long[] metaLog,
         int nextOp,
         int nextOpStructureId,
         long nextOpPageId
@@ -47,8 +45,7 @@ public class LockLogSnapshot implements Dump {
         this.name = name;
         this.time = time;
         this.headIdx = headIdx;
-        this.pageIdsLockLog = locklog;
-        this.metaLog = metaLog;
+        this.pageLockLog = locklog;
         this.nextOp = nextOp;
         this.nextOpStructureId = nextOpStructureId;
         this.nextOpPageId = nextOpPageId;
@@ -64,7 +61,7 @@ public class LockLogSnapshot implements Dump {
         SB logLocksStr = new SB();
 
         for (int i = 0; i < headIdx; i += 2) {
-            long metaOnLock = pageIdsLockLog[i + 1];
+            long metaOnLock = pageLockLog[i + 1];
 
             assert metaOnLock != 0;
 
@@ -72,7 +69,7 @@ public class LockLogSnapshot implements Dump {
 
             assert idx >= 0;
 
-            long pageId = pageIdsLockLog[i];
+            long pageId = pageLockLog[i];
 
             int op = (int)((metaOnLock >> 32) & LOCK_OP_MASK);
             int cacheId = (int)(metaOnLock);

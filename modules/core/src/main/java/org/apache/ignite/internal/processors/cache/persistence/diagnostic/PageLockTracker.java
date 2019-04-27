@@ -182,7 +182,7 @@ public abstract class PageLockTracker<T extends Dump> implements PageLockListene
 
     protected abstract T dump0();
 
-    @Override public T dump() {
+    @Override public synchronized T dump() {
         dump = true;
 
         awaitLocks();
