@@ -23,9 +23,12 @@ import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 public class LockLogSnapshot implements Dump {
     public final String name;
 
+    public final long time;
+
     public final int headIdx;
 
     public final long[] pageIdsLockLog;
+    public final long[] metaLog;
 
     public final int nextOp;
     public final int nextOpStructureId;
@@ -33,15 +36,17 @@ public class LockLogSnapshot implements Dump {
 
     public LockLogSnapshot(
         String name,
-        int headIdx,
+        long time, int headIdx,
         long[] pageIdsLockLog,
-        int nextOp,
+        long[] metaLog, int nextOp,
         int nextOpStructureId,
         long nextOpPageId
     ) {
         this.name = name;
+        this.time = time;
         this.headIdx = headIdx;
         this.pageIdsLockLog = pageIdsLockLog;
+        this.metaLog = metaLog;
         this.nextOp = nextOp;
         this.nextOpStructureId = nextOpStructureId;
         this.nextOpPageId = nextOpPageId;

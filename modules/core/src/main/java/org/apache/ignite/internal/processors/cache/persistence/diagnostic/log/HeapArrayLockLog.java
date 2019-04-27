@@ -26,9 +26,11 @@ public class HeapArrayLockLog extends LockLog {
         long[] pageIdsLockLog = copyOf(this.pageIdsLockLog, this.pageIdsLockLog.length);
 
         return new LockLogSnapshot(
-            name + " (time=" + System.currentTimeMillis() + ")",
+            name,
+            System.currentTimeMillis(),
             headIdx,
             pageIdsLockLog,
+            null,
             nextOp,
             nextOpStructureId,
             nextOpPageId

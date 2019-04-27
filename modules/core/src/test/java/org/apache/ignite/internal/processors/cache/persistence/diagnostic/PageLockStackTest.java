@@ -20,7 +20,7 @@ import static java.util.Arrays.stream;
 import static java.util.stream.IntStream.range;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.PageLockTracker.BEFORE_READ_LOCK;
 
-public abstract class PageLockStackTest {
+public abstract class PageLockStackTest extends AbstractPageLockTest {
     protected static final int STRUCTURE_ID = 123;
 
     protected abstract LockStack createLockStackTracer(String name);
@@ -721,7 +721,7 @@ public abstract class PageLockStackTest {
     }
 
     @Test
-    public void testMultiThreadDump() throws IgniteCheckedException {
+    public void testThreadDump() throws IgniteCheckedException {
         PageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId = 1;
@@ -800,27 +800,4 @@ public abstract class PageLockStackTest {
         System.out.println(">>> Avarage time dump creation:" + (totalExecutionTime / cntDumps) + " ns");
     }
 
-    private void randomLocks(int deep, Runnable r) {
-        for (int i = 0; i < deep; i++)
-            r.run();
-    }
-
-    private void awaitRandom(int bound) {
-        try {
-            U.sleep(nextRandomWaitTimeout(bound));
-        }
-        catch (IgniteInterruptedCheckedException e) {
-            throw new IgniteException(e);
-        }
-    }
-
-    private int nextRandomWaitTimeout(int bound) {
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-        return rnd.nextInt(bound);
-    }
-
-    private boolean isEmptyArray(long[] arr) {
-        return stream(arr).filter(value -> value != 0).count() == 0;
-    }
 }
