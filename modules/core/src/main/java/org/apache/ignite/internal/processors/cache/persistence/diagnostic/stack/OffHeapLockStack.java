@@ -1,19 +1,12 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.LongBuffer;
-import java.util.Arrays;
-import java.util.NoSuchElementException;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
 import org.apache.ignite.internal.util.GridUnsafe;
 
 import static java.util.Arrays.copyOf;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageId;
-import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 
-public class OffHeapLockStack extends AbstractLockStack {
+public class OffHeapLockStack extends LockStack {
     private static final int CAPACITY = 128;
     private static final int STACK_SIZE = CAPACITY * 8;
 
@@ -25,16 +18,16 @@ public class OffHeapLockStack extends AbstractLockStack {
         this.ptr = allocate(STACK_SIZE);
     }
 
-    @Override protected int capacity() {
+    @Override public int capacity() {
         return CAPACITY;
     }
 
-    @Override protected long pageByIndex(int headIdx) {
-        return GridUnsafe.getLong(ptr + offset(headIdx));
+    @Override protected long getByIndex(int idx) {
+        return GridUnsafe.getLong(ptr + offset(idx));
     }
 
-    @Override protected void setPageToIndex(int headIdx, long pageId) {
-        GridUnsafe.putLong(ptr + offset(headIdx), pageId);
+    @Override protected void setByIndex(int idx, long val) {
+        GridUnsafe.putLong(ptr + offset(idx), val);
     }
 
     private long offset(long headIdx) {
@@ -50,13 +43,13 @@ public class OffHeapLockStack extends AbstractLockStack {
     }
 
     @Override public LocksStackSnapshot dump0() {
-        LongBuffer buf = LongBuffer.allocate(CAPACITY);
+        LongBuffer buf = LongBuffer.allocate(STACK_SIZE);
 
-        GridUnsafe.copyMemory(null, ptr, buf.array(), GridUnsafe.LONG_ARR_OFF, CAPACITY);
+        GridUnsafe.copyMemory(null, ptr, buf.array(), GridUnsafe.LONG_ARR_OFF, STACK_SIZE);
 
         long[] stack = buf.array();
 
-        assert stack.length == CAPACITY;
+        assert stack.length == STACK_SIZE;
 
         return new LocksStackSnapshot(
             name,

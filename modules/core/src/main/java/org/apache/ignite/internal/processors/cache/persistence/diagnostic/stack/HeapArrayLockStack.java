@@ -1,11 +1,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
-
 import static java.util.Arrays.copyOf;
 
-public class HeapArrayLockStack extends AbstractLockStack {
+public class HeapArrayLockStack extends LockStack {
     private static final int STACK_SIZE = 128;
 
     private final long[] pageIdLocksStack;
@@ -16,16 +13,16 @@ public class HeapArrayLockStack extends AbstractLockStack {
         this.pageIdLocksStack = new long[STACK_SIZE];
     }
 
-    @Override protected int capacity() {
+    @Override public int capacity() {
         return STACK_SIZE;
     }
 
-    @Override protected long pageByIndex(int headIdx) {
-        return pageIdLocksStack[headIdx];
+    @Override protected long getByIndex(int idx) {
+        return pageIdLocksStack[idx];
     }
 
-    @Override protected void setPageToIndex(int headIdx, long pageId) {
-        pageIdLocksStack[headIdx] = pageId;
+    @Override protected void setByIndex(int idx, long val) {
+        pageIdLocksStack[idx] = val;
     }
 
     /** {@inheritDoc} */

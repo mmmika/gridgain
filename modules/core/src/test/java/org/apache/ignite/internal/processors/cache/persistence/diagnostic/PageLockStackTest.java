@@ -3,10 +3,13 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.LockStack;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.LocksStackSnapshot;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
@@ -14,16 +17,17 @@ import org.junit.Test;
 
 import static java.time.Duration.ofMinutes;
 import static java.util.Arrays.stream;
-import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker.BEFORE_READ_LOCK;
+import static java.util.stream.IntStream.range;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.PageLockTracker.BEFORE_READ_LOCK;
 
-public abstract class AbstractLockStackTest {
+public abstract class PageLockStackTest {
     protected static final int STRUCTURE_ID = 123;
 
-    protected abstract AbstractPageLockTracker<LocksStackSnapshot> createLockStackTracer(String name);
+    protected abstract LockStack createLockStackTracer(String name);
 
     @Test
     public void testOneReadPageLock() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId = 1;
         long page = 2;
@@ -67,7 +71,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testTwoReadPageLock() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -149,7 +153,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_1() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -273,7 +277,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_2() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -393,7 +397,7 @@ public abstract class AbstractLockStackTest {
 
     @Test
     public void testThreeReadPageLock_3() {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId1 = 1;
         long pageId2 = 11;
@@ -516,8 +520,209 @@ public abstract class AbstractLockStackTest {
     }
 
     @Test
+    public void testUnlockUnexcpected() {
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
+
+        long pageId = 1;
+        long page = 2;
+        long pageAddr = 3;
+
+        LocksStackSnapshot dump;
+
+        // Lock stack should be invalid after this operation because we can not unlock page
+        // which was not locked.
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId, page, pageAddr);
+
+        System.out.println(lockStack);
+
+        dump = lockStack.dump();
+
+        Assert.assertTrue(lockStack.isInvalid());
+        String msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Stack is empty"));
+
+        Assert.assertEquals(0, dump.headIdx);
+        Assert.assertTrue(isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+    }
+
+    @Test
+    public void testUnlockUnexcpectedOnNotEmptyStack() {
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
+
+        long pageId1 = 1;
+        long pageId2 = 11;
+        long page1 = 2;
+        long page2 = 12;
+        long pageAddr1 = 3;
+        long pageAddr2 = 13;
+
+        LocksStackSnapshot dump;
+
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
+
+        // Lock stack should be invalid after this operation because we can not unlock page
+        // which was not locked.
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId2, page2, pageAddr2);
+
+        System.out.println(lockStack);
+
+        dump = lockStack.dump();
+
+        Assert.assertTrue(lockStack.isInvalid());
+        String msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Can not find pageId in stack"));
+
+        Assert.assertEquals(1, dump.headIdx);
+        Assert.assertEquals(pageId1, dump.pageIdLocksStack[0]);
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+    }
+
+    @Test
+    public void testUnlockUnexcpectedOnNotEmptyStackMultiLocks() {
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
+
+        long pageId1 = 1;
+        long pageId2 = 11;
+        long pageId3 = 111;
+        long pageId4 = 1111;
+        long page1 = 2;
+        long page2 = 12;
+        long page3 = 122;
+        long page4 = 1222;
+        long pageAddr1 = 3;
+        long pageAddr2 = 13;
+        long pageAddr3 = 133;
+        long pageAddr4 = 1333;
+
+        LocksStackSnapshot dump;
+
+        lockStack.onReadLock(STRUCTURE_ID, pageId1, page1, pageAddr1);
+        lockStack.onReadLock(STRUCTURE_ID, pageId2, page2, pageAddr2);
+        lockStack.onReadLock(STRUCTURE_ID, pageId3, page3, pageAddr3);
+
+        // Lock stack should be invalid after this operation because we can not unlock page
+        // which was not locked.
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId4, page4, pageAddr4);
+
+        System.out.println(lockStack);
+
+        dump = lockStack.dump();
+
+        Assert.assertTrue(lockStack.isInvalid());
+        String msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Can not find pageId in stack"));
+
+        Assert.assertEquals(3, dump.headIdx);
+        Assert.assertEquals(pageId1, dump.pageIdLocksStack[0]);
+        Assert.assertEquals(pageId2, dump.pageIdLocksStack[1]);
+        Assert.assertEquals(pageId3, dump.pageIdLocksStack[2]);
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+    }
+
+    @Test
+    public void testStackOverFlow() {
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
+
+        long pageId = 1;
+        long page = 2;
+        long pageAddr = 3;
+
+        LocksStackSnapshot dump;
+
+        // Lock stack should be invalid after this operation because we can get lock more that
+        // stack capacity, +1 for overflow.
+        range(0, lockStack.capacity() + 1).forEach((i) -> {
+            lockStack.onReadLock(STRUCTURE_ID, pageId, page, pageAddr);
+        });
+
+        System.out.println(lockStack);
+
+        dump = lockStack.dump();
+
+        Assert.assertTrue(lockStack.isInvalid());
+        Assert.assertTrue(lockStack.invalidContext().msg.contains("Stack overflow"));
+
+        Assert.assertEquals(lockStack.capacity(), dump.headIdx);
+        Assert.assertTrue(!isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+    }
+
+    @Test
+    public void testStackOperationAfterInvalid() {
+        LockStack lockStack = createLockStackTracer(Thread.currentThread().getName());
+
+        long pageId = 1;
+        long page = 2;
+        long pageAddr = 3;
+
+        LocksStackSnapshot dump;
+
+        // Lock stack should be invalid after this operation because we can not unlock page
+        // which was not locked.
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId, page, pageAddr);
+
+        dump = lockStack.dump();
+
+        Assert.assertTrue(lockStack.isInvalid());
+        String msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Stack is empty"));
+
+        System.out.println(lockStack.invalidContext());
+
+        Assert.assertEquals(0, dump.headIdx);
+        Assert.assertTrue(isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+
+        lockStack.onBeforeReadLock(STRUCTURE_ID, pageId, page);
+
+        Assert.assertTrue(lockStack.isInvalid());
+        msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Stack is empty"));
+
+        Assert.assertEquals(0, dump.headIdx);
+        Assert.assertTrue(isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+
+        lockStack.onReadLock(STRUCTURE_ID, pageId, page, pageAddr);
+
+        Assert.assertTrue(lockStack.isInvalid());
+        msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Stack is empty"));
+
+        Assert.assertEquals(0, dump.headIdx);
+        Assert.assertTrue(isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+
+        lockStack.onReadUnlock(STRUCTURE_ID, pageId, page, pageAddr);
+
+        Assert.assertTrue(lockStack.isInvalid());
+        msg = lockStack.invalidContext().msg;
+
+        Assert.assertTrue(msg, msg.contains("Stack is empty"));
+
+        Assert.assertEquals(0, dump.headIdx);
+        Assert.assertTrue(isEmptyArray(dump.pageIdLocksStack));
+        Assert.assertEquals(0, dump.nextOpPageId);
+        Assert.assertEquals(0, dump.nextOp);
+    }
+
+    @Test
     public void testMultiThreadDump() throws IgniteCheckedException {
-        AbstractPageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
+        PageLockTracker<LocksStackSnapshot> lockStack = createLockStackTracer(Thread.currentThread().getName());
 
         long pageId = 1;
         long page = 2;
@@ -592,7 +797,7 @@ public abstract class AbstractLockStackTest {
 
         f.get();
 
-        System.out.println(">>> Avarage time dump creation:" + (totalExecutionTime / cntDumps) + "ns");
+        System.out.println(">>> Avarage time dump creation:" + (totalExecutionTime / cntDumps) + " ns");
     }
 
     private void randomLocks(int deep, Runnable r) {

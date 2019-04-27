@@ -9,13 +9,13 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.util.IgniteUtils.hexInt;
 import static org.apache.ignite.internal.util.IgniteUtils.hexLong;
 
-public abstract class AbstractPageLockTracker<T extends Dump> implements PageLockListener, DumpSupported<T> {
-    protected static final int READ_LOCK = 1;
-    protected static final int READ_UNLOCK = 2;
-    protected static final int WRITE_LOCK = 3;
-    protected static final int WRITE_UNLOCK = 4;
-    protected static final int BEFORE_READ_LOCK = 5;
-    protected static final int BEFORE_WRITE_LOCK = 6;
+public abstract class PageLockTracker<T extends Dump> implements PageLockListener, DumpSupported<T> {
+    public static final int READ_LOCK = 1;
+    public static final int READ_UNLOCK = 2;
+    public static final int WRITE_LOCK = 3;
+    public static final int WRITE_UNLOCK = 4;
+    public static final int BEFORE_READ_LOCK = 5;
+    public static final int BEFORE_WRITE_LOCK = 6;
 
     protected final String name;
 
@@ -25,7 +25,7 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
 
     private volatile InvalidContext<T> invalidCtx;
 
-    protected AbstractPageLockTracker(String name) {
+    protected PageLockTracker(String name) {
         this.name = name;
     }
 
@@ -133,6 +133,12 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
         return invalidCtx;
     }
 
+    public abstract int capacity();
+
+    protected abstract long getByIndex(int idx);
+
+    protected abstract void setByIndex(int idx, long val);
+
     protected void invalid(String msg) {
         T dump = dump0();
 
@@ -201,11 +207,11 @@ public abstract class AbstractPageLockTracker<T extends Dump> implements PageLoc
         throw new UnsupportedOperationException();
     }
 
-    protected static String argsToString(int structureId, long pageId, int flags) {
+    public static String argsToString(int structureId, long pageId, int flags) {
         return "[structureId=" + structureId + ", pageId" + pageIdToString(pageId) + "]";
     }
 
-    protected static String pageIdToString(long pageId) {
+    public static String pageIdToString(long pageId) {
         return "pageId=" + pageId
             + " [pageIdxHex=" + hexLong(pageId)
             + ", partId=" + pageId(pageId) + ", pageIdx=" + pageIndex(pageId)

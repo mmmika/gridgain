@@ -8,4 +8,8 @@ public class InvalidContext<T extends Dump> {
         this.msg = msg;
         this.dump = dump;
     }
+
+    @Override public String toString() {
+        return "Error: " + msg + "\n" + dump.toString();
+    }
 }

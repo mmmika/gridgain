@@ -1,11 +1,9 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack;
 
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractLockStackTest;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.AbstractPageLockTracker;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.LocksStackSnapshot;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.PageLockStackTest;
 
-public class OffHeapLockStackTest extends AbstractLockStackTest {
-    @Override protected AbstractPageLockTracker<LocksStackSnapshot> createLockStackTracer(String name) {
+public class OffHeapLockStackTest extends PageLockStackTest {
+    @Override protected LockStack createLockStackTracer(String name) {
         return new OffHeapLockStack(name);
     }
 }
