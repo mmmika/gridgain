@@ -4,6 +4,6 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.PageLo
 
 public class HeapArrayLockStackTest extends PageLockStackTest {
     @Override protected LockStack createLockStackTracer(String name) {
-        return new HeapArrayLockStack(name);
+        return new HeapArrayLockStack("Thread=" + name);
     }
 }

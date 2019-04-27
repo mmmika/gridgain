@@ -8,7 +8,7 @@ public class HeapArrayLockStack extends LockStack {
     private final long[] pageIdLocksStack;
 
     public HeapArrayLockStack(String name) {
-        super("name=" + name);
+        super(name);
 
         this.pageIdLocksStack = new long[STACK_SIZE];
     }

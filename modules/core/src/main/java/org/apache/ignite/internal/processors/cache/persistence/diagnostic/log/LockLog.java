@@ -50,7 +50,7 @@ public abstract class LockLog extends PageLockTracker<LockLogSnapshot> {
     private void log(int cacheId, long pageId, int flags) {
         assert pageId > 0;
 
-        if (headIdx + 2 > capacity())
+        if ((headIdx + 2) / 2 > capacity())
             throw new StackOverflowError("Stack overflow, size:" + capacity() +
                 " nextOpCacheId=" + cacheId + ", nextOpPageId=" + pageId + ", flags=" + flags +
                 "\n" + toString());

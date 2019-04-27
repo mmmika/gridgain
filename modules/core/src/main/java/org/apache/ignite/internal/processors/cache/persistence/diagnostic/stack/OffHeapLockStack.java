@@ -13,7 +13,7 @@ public class OffHeapLockStack extends LockStack {
     private final long ptr;
 
     public OffHeapLockStack(String name) {
-        super("name=" + name);
+        super(name);
 
         this.ptr = allocate(STACK_SIZE);
     }
