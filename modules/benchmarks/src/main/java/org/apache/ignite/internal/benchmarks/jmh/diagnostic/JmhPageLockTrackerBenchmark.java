@@ -3,6 +3,7 @@ package org.apache.ignite.internal.benchmarks.jmh.diagnostic;
 import org.apache.ignite.internal.benchmarks.jmh.JmhAbstractBenchmark;
 import org.apache.ignite.internal.benchmarks.jmh.runner.JmhIdeBenchmarkRunner;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.log.HeapArrayLockLog;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.log.OffHeapLockLog;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.HeapArrayLockStack;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.OffHeapLockStack;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
@@ -14,7 +15,7 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-public class JmhPageListenerLockTrackerBenchmark extends JmhAbstractBenchmark {
+public class JmhPageLockTrackerBenchmark extends JmhAbstractBenchmark {
     // without sync
     //Benchmark                                     (stackSize)              (type)   Mode  Cnt          Score         Error  Units
     //JmhPageListenerLockTrackerBenchmark.lockUnlock            2  HeapArrayLockStack  thrpt   10  112220367.940 ± 3489526.518  ops/s
@@ -66,7 +67,7 @@ public class JmhPageListenerLockTrackerBenchmark extends JmhAbstractBenchmark {
             .threads(1)
             .warmupIterations(10)
             .measurementIterations(10)
-            .benchmarks(JmhPageListenerLockTrackerBenchmark.class.getSimpleName())
+            .benchmarks(JmhPageLockTrackerBenchmark.class.getSimpleName())
             .jvmArguments("-Xms4g", "-Xmx4g")
             .run();
 
@@ -79,7 +80,7 @@ public class JmhPageListenerLockTrackerBenchmark extends JmhAbstractBenchmark {
         @Param({"2", "4", "8", "16"})
         int stackSize;
 
-        @Param({"HeapArrayLockStack", "OffHeapLockStack"})
+        @Param({"HeapArrayLockLog", "OffHeapLockLog"})
         String type;
 
         int cacheId = 123;
@@ -118,6 +119,8 @@ public class JmhPageListenerLockTrackerBenchmark extends JmhAbstractBenchmark {
                 return new HeapArrayLockLog(name);
             case "OffHeapLockStack":
                 return new OffHeapLockStack(name);
+            case "OffHeapLockLog":
+                return new OffHeapLockLog(name);
         }
 
         return null;

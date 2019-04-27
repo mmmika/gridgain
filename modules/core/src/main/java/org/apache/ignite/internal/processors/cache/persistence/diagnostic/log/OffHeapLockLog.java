@@ -9,7 +9,7 @@ public class OffHeapLockLog extends LockLog {
 
     private final long ptr;
 
-    protected OffHeapLockLog(String name) {
+    public OffHeapLockLog(String name) {
         super(name);
 
         this.ptr = allocate(LOG_SIZE);
