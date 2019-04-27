@@ -26,7 +26,6 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RecycleRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.DataStructurePageLockListener;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -41,6 +40,7 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.MAX_PARTITION_ID;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.MAX_ITEMID_NUM;
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.DataStructurePageLockListener.LOCK_TRACKER;
 
 /**
  * Base class for all the data structures based on {@link PageMemory}.
@@ -62,7 +62,7 @@ public abstract class DataStructure implements PageLockListener {
     protected ReuseList reuseList;
 
     /** */
-    protected final DataStructurePageLockListener delegate;
+    protected final PageLockListener delegate;
 
     /** Name (for debug purposes). */
     protected final String name;
@@ -83,7 +83,7 @@ public abstract class DataStructure implements PageLockListener {
         this.grpId = cacheId;
         this.pageMem = pageMem;
         this.wal = wal;
-        this.delegate = DataStructurePageLockListener.createTracker(name);
+        this.delegate = LOCK_TRACKER.registrateStructure(name);
         this.name = name;
     }
 
@@ -161,7 +161,7 @@ public abstract class DataStructure implements PageLockListener {
 
     /**
      * @param pageId Page ID.
-     * @param page  Page pointer.
+     * @param page Page pointer.
      */
     protected final void releasePage(long pageId, long page) {
         pageMem.releasePage(grpId, pageId, page);
@@ -186,9 +186,8 @@ public abstract class DataStructure implements PageLockListener {
     }
 
     /**
-     * <p>
-     * Note: Default WAL record policy will be used.
-     * </p>
+     * <p> Note: Default WAL record policy will be used. </p>
+     *
      * @param pageId Page ID
      * @param page Page pointer.
      * @param pageAddr Page address.
@@ -210,7 +209,7 @@ public abstract class DataStructure implements PageLockListener {
     /**
      * @param pageId Page ID
      * @param page Page pointer.
-     * @param pageAddr  Page address.
+     * @param pageAddr Page address.
      */
     protected final void readUnlock(long pageId, long page, long pageAddr) {
         PageHandler.readUnlock(pageMem, grpId, pageId, page, pageAddr, this);
@@ -219,7 +218,7 @@ public abstract class DataStructure implements PageLockListener {
     /**
      * @param pageId Page ID
      * @param page Page pointer.
-     * @param pageAddr  Page address.
+     * @param pageAddr Page address.
      * @param walPlc Full page WAL record policy.
      * @param dirty Dirty flag.
      */

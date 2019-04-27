@@ -1,69 +1,103 @@
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.stack.HeapArrayLockStack;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.lang.IgniteFuture;
 
-public class DataStructurePageLockListener implements PageLockListener {
+public class DataStructurePageLockListener implements PageLockListener, DumpSupported<ThreadDumpLocks> {
+    public static final DataStructurePageLockListener LOCK_TRACKER = new DataStructurePageLockListener();
 
-    private final String structureName;
+    private final Map<Long, PageLockTracker> threadStacks = new ConcurrentHashMap<>();
+    private final Map<Long, String> idToThreadName = new ConcurrentHashMap<>();
 
-    private final Map<Long, PageLockListener> threadStacks = new ConcurrentHashMap<>();
+    private int idx;
+
+    private final Map<String, Integer> structureNameToId = new HashMap<>();
 
     /** */
-    private final ThreadLocal<PageLockListener> lockTracker = ThreadLocal.withInitial(() -> {
+    private final ThreadLocal<PageLockTracker> lockTracker = ThreadLocal.withInitial(() -> {
         Thread thread = Thread.currentThread();
 
         String threadName = thread.getName();
         long threadId = thread.getId();
 
-        PageLockListener stack = createLockStack(threadName + "[" + threadId + "]" + " - " + name());
+        PageLockTracker stack = createLockTracker(threadName + "[" + threadId + "]");
 
         threadStacks.put(threadId, stack);
+
+        idToThreadName.put(threadId, threadName);
 
         return stack;
     });
 
-    private DataStructurePageLockListener(String structureName) {
-        this.structureName = structureName;
+    private DataStructurePageLockListener() {
+
     }
 
-    public static DataStructurePageLockListener createTracker(String structureName) {
-        return new DataStructurePageLockListener(structureName);
+    public synchronized PageLockListener registrateStructure(String structureName) {
+        Integer idx = structureNameToId.get(structureName);
+
+        if (idx == null)
+            structureNameToId.put(structureName, idx = (++this.idx));
+
+        return new PageLockListenerIndexAdapter(idx, this);
     }
 
-    public String name() {
-        return structureName;
+    @Override public void onBeforeWriteLock(int structureId, long pageId, long page) {
+        lockTracker.get().onBeforeWriteLock(structureId, pageId, page);
     }
 
-    @Override public void onBeforeWriteLock(int cacheId, long pageId, long page) {
-        lockTracker.get().onBeforeWriteLock(cacheId, pageId, page);
+    @Override public void onWriteLock(int structureId, long pageId, long page, long pageAddr) {
+        lockTracker.get().onWriteLock(structureId, pageId, page, pageAddr);
     }
 
-    @Override public void onWriteLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().onWriteLock(cacheId, pageId, page, pageAddr);
+    @Override public void onWriteUnlock(int structureId, long pageId, long page, long pageAddr) {
+        lockTracker.get().onWriteUnlock(structureId, pageId, page, pageAddr);
     }
 
-    @Override public void onWriteUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().onWriteUnlock(cacheId, pageId, page, pageAddr);
+    @Override public void onBeforeReadLock(int structureId, long pageId, long page) {
+        lockTracker.get().onBeforeReadLock(structureId, pageId, page);
     }
 
-    @Override public void onBeforeReadLock(int cacheId, long pageId, long page) {
-        lockTracker.get().onBeforeReadLock(cacheId, pageId, page);
+    @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
+        lockTracker.get().onReadLock(structureId, pageId, page, pageAddr);
     }
 
-    @Override public void onReadLock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().onReadLock(cacheId, pageId, page, pageAddr);
+    @Override public void onReadUnlock(int structureId, long pageId, long page, long pageAddr) {
+        lockTracker.get().onReadUnlock(structureId, pageId, page, pageAddr);
     }
 
-    @Override public void onReadUnlock(int cacheId, long pageId, long page, long pageAddr) {
-        lockTracker.get().onReadUnlock(cacheId, pageId, page, pageAddr);
-    }
-
-    private PageLockListener createLockStack(String name) {
-        //return new OffHeapLockStack(name, threadId);
-        //return new HeapArrayLockLog(name, threadId);
+    private PageLockTracker createLockTracker(String name) {
+        //return new OffHeapLockLog(name);
+        //return new HeapArrayLockLog(name);
+        //return new OffHeapLockStack(name);
         return new HeapArrayLockStack(name);
+    }
+
+    @Override public synchronized ThreadDumpLocks dump() {
+        Map<Long, Dump> dumps = threadStacks.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().dump()
+            ));
+
+        Map<Integer, String> idToStrcutureName =
+            structureNameToId.entrySet().stream()
+                .collect(Collectors.toMap(
+                    Map.Entry::getValue,
+                    Map.Entry::getKey
+                ));
+
+        return new ThreadDumpLocks(idToStrcutureName, idToThreadName, dumps);
+    }
+
+    @Override public IgniteFuture dumpSync() {
+        throw new UnsupportedOperationException();
     }
 }
