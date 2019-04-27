@@ -36,16 +36,18 @@ public class LockLogSnapshot implements Dump {
 
     public LockLogSnapshot(
         String name,
-        long time, int headIdx,
-        long[] pageIdsLockLog,
-        long[] metaLog, int nextOp,
+        long time,
+        int headIdx,
+        long[] locklog,
+        long[] metaLog,
+        int nextOp,
         int nextOpStructureId,
         long nextOpPageId
     ) {
         this.name = name;
         this.time = time;
         this.headIdx = headIdx;
-        this.pageIdsLockLog = pageIdsLockLog;
+        this.pageIdsLockLog = locklog;
         this.metaLog = metaLog;
         this.nextOp = nextOp;
         this.nextOpStructureId = nextOpStructureId;
