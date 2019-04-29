@@ -13,17 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-'use strict';
+/**
+ * Enumerates possible types of partition map exchange process.
+ */
+public enum ExchangeType {
+    /** Local join of client node: used only on joining node, completed locally. */
+    CLIENT,
 
-// Fire me up!
+    /** Distributed partition map exchange, assumes distributed messaging involving coordinator node. */
+    ALL,
 
-module.exports = {
-    implements: 'mongoose:mock',
-    inject: ['require(mongoose)', 'require(mockgoose)']
-};
-
-module.exports.factory = (mongoose, mockgoose) => {
-    return mockgoose(mongoose)
-            .then(() => mongoose);
-};
+    /** Leave/join of another client node, completed locally. */
+    NONE
+}
